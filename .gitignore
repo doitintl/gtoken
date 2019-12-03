@@ -1,0 +1,16 @@
+.cover
+.git
+.gtm
+
+.idea
+.vscode
+
+.bin
+.env
+
+**/.DS_Store
+**/debug
+**/debug.test
+
+# ignore binary
+gtoken
