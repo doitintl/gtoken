@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -20,7 +21,12 @@ import (
 )
 
 var (
+	// main context
 	mainCtx context.Context
+	// Version contains the current version.
+	Version = "dev"
+	// BuildDate contains a string with the build date.
+	BuildDate = "unknown"
 )
 
 func getServiceAccountID(ctx context.Context) (string, error) {
@@ -83,9 +89,8 @@ func getTokenDuration(jwtToken string) (time.Duration, error) {
 			return 0, fmt.Errorf("failed to convert expire date: %s", err.Error())
 		}
 		return time.Unix(unixTime, 0).Sub(time.Now()), nil
-	} else {
-		return 0, fmt.Errorf("failed to get claims from ID token: %s", err.Error())
 	}
+	return 0, fmt.Errorf("failed to get claims from ID token: %s", err.Error())
 }
 
 func writeToken(token string, fileName string) error {
@@ -200,6 +205,11 @@ func main() {
 		Name:   "gtoken",
 		Usage:  "generate GCP ID token with current service account",
 		Action: generateIDTokenCmd,
+	}
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("gtoken %s\n", Version)
+		fmt.Printf("  Build date: %s\n", BuildDate)
+		fmt.Printf("  Built with: %s\n", runtime.Version())
 	}
 
 	err := app.Run(os.Args)

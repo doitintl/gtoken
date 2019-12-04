@@ -1,12 +1,12 @@
 MODULE   = $(shell env GO111MODULE=on $(GO) list -m)
 DATE    ?= $(shell date +%FT%T%z)
-VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || \
+VERSION ?= $(shell git describe --tags --always --dirty --match="v*" 2> /dev/null || \
 			cat $(CURDIR)/.version 2> /dev/null || echo v0)
 PKGS     = $(or $(PKG),$(shell env GO111MODULE=on $(GO) list ./...))
 TESTPKGS = $(shell env GO111MODULE=on $(GO) list -f \
 			'{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' \
 			$(PKGS))
-BIN      = $(CURDIR)/bin
+BIN      = $(CURDIR)/.bin
 
 GO      = go
 TIMEOUT = 15
@@ -15,12 +15,13 @@ Q = $(if $(filter 1,$V),,@)
 M = $(shell printf "\033[34;1m▶\033[0m")
 
 export GO111MODULE=on
+export CGO_ENABLED=0
 
 .PHONY: all
 all: fmt lint | $(BIN) ; $(info $(M) building executable…) @ ## Build program binary
 	$Q $(GO) build \
 		-tags release \
-		-ldflags '-X $(MODULE)/cmd.Version=$(VERSION) -X $(MODULE)/cmd.BuildDate=$(DATE)' \
+		-ldflags '-X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
 		-o $(BIN)/$(basename $(MODULE)) main.go
 
 # Tools
