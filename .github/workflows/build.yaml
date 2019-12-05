@@ -1,0 +1,38 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+
+jobs:
+
+  build:
+ 
+    runs-on: ubuntu-18.04
+ 
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: decide on tag
+      run: |
+        image_tag=$(echo $GITHUB_REF | sed -e 's/refs\/heads\///g' -e 's/refs\/tags\///g' | sed -e 's/master/latest/g')
+        echo "::debug::decide on image tag ${image_tag}"
+        echo "::set-env name=IMAGE_TAG::${image_tag}"
+
+    - name: build image
+      env:
+        DOCKER_BUILDKIT: 1
+      run: |
+        docker build --tag ${GITHUB_REPOSITORY}:${IMAGE_TAG} .
+    
+    - name: push image
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
+        docker push ${GITHUB_REPOSITORY}:${IMAGE_TAG}
+        docker logout
