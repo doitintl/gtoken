@@ -16,6 +16,7 @@ M = $(shell printf "\033[34;1m▶\033[0m")
 
 export GO111MODULE=on
 export CGO_ENABLED=0
+export GOPROXY=https://proxy.golang.org
 
 .PHONY: all
 all: fmt lint | $(BIN) ; $(info $(M) building executable…) @ ## Build program binary

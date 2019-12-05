@@ -3,24 +3,24 @@
 #
 # ----- Go Builder Image ------
 #
-FROM golang:1.13 AS builder
+FROM golang:1.13-alpine AS builder
 
 # curl git bash
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		curl \
-		git \
-		bash \
-	&& rm -rf /var/lib/apt/lists/*
-
+RUN apk add --no-cache curl git bash make
 
 #
 # ----- Build and Test Image -----
 #
 FROM builder as build
 
-# set working directory
+# set working directorydoc
 RUN mkdir -p /go/src/gtoken
 WORKDIR /go/src/gtoken
+
+# load dependency
+COPY go.mod .
+COPY go.sum .
+RUN --mount=type=cache,target=/go/mod go mod download
 
 # copy sources
 COPY . .

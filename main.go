@@ -202,9 +202,10 @@ func main() {
 				Usage: "write ID token into file",
 			},
 		},
-		Name:   "gtoken",
-		Usage:  "generate GCP ID token with current service account",
-		Action: generateIDTokenCmd,
+		Name:    "gtoken",
+		Usage:   "generate GCP ID token with current service account",
+		Action:  generateIDTokenCmd,
+		Version: Version,
 	}
 	cli.VersionPrinter = func(c *cli.Context) {
 		fmt.Printf("gtoken %s\n", Version)
