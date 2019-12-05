@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/oauth2/google"
@@ -49,7 +50,15 @@ func getServiceAccountID(ctx context.Context) (string, error) {
 	return "", errors.New("failed to find service account ID")
 }
 
-func generateIDToken(ctx context.Context, serviceAccountID string) (string, error) {
+func getServiceAccountEmail() (string, error) {
+	email, err := metadata.Email("")
+	if err != nil {
+		return "", fmt.Errorf("failed to get default email: %s", err)
+	}
+	return email, nil
+}
+
+func generateIDToken(ctx context.Context, serviceAccount string) (string, error) {
 	log.Println("generating a new ID token")
 
 	// handle the 'refresh token' command
@@ -66,7 +75,7 @@ func generateIDToken(ctx context.Context, serviceAccountID string) (string, erro
 		return "", fmt.Errorf("failed to get iam credentials client: %s", err.Error())
 	}
 	generateIDTokenResponse, err := iamCredentialsClient.Projects.ServiceAccounts.GenerateIdToken(
-		fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountID),
+		fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount),
 		&iamcredentials.GenerateIdTokenRequest{
 			Audience: "32555940559.apps.googleusercontent.com",
 		},
@@ -122,8 +131,12 @@ func writeToken(token string, fileName string) error {
 }
 
 func generateIDTokenCmd(c *cli.Context) error {
-	// find out active Service Account ID
-	serviceAccountID, err := getServiceAccountID(mainCtx)
+	// find out active Service Account, first by ID
+	serviceAccount, err := getServiceAccountID(mainCtx)
+	if err != nil {
+		// fallback: try to get Service Account email from metadata server
+		serviceAccount, err = getServiceAccountEmail()
+	}
 	if err != nil {
 		return err
 	}
@@ -137,7 +150,7 @@ func generateIDTokenCmd(c *cli.Context) error {
 			return nil // avoid goroutine leak
 		case <-timer:
 			// generate ID token
-			token, err := generateIDToken(mainCtx, serviceAccountID)
+			token, err := generateIDToken(mainCtx, serviceAccount)
 			if err != nil {
 				return err
 			}

@@ -3,6 +3,7 @@ module gtoken
 go 1.13
 
 require (
+	cloud.google.com/go v0.49.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/spf13/cobra v0.0.5
 	github.com/urfave/cli/v2 v2.0.0
