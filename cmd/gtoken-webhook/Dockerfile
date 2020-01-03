@@ -14,8 +14,8 @@ RUN apk add --no-cache curl git bash make
 FROM builder as build
 
 # set working directorydoc
-RUN mkdir -p /go/src/gtoken
-WORKDIR /go/src/gtoken
+RUN mkdir -p /go/src/gtoken-webhook
+WORKDIR /go/src/gtoken-webhook
 
 # load dependency
 COPY go.mod .
@@ -32,7 +32,7 @@ RUN make
 #
 # ------ get latest CA certificates
 #
-FROM alpine:3.10 as certs
+FROM alpine:3.11 as certs
 RUN apk --update add ca-certificates
 
 
@@ -45,6 +45,6 @@ FROM scratch
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # this is the last commabd since it's never cached
-COPY --from=build /go/src/gtoken/.bin/gtoken /gtoken
+COPY --from=build /go/src/gtoken-webhook/.bin/gtoken-webhook /gtoken-webhook
 
-ENTRYPOINT ["/gtoken"]
+ENTRYPOINT ["/gtoken-webhook"]

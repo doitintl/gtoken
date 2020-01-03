@@ -1,16 +1,18 @@
 .cover
+**/.cover
 .git
 .gtm
 
 .idea
 .vscode
+*.code-workspace
 
 .bin
+**/.bin
+**/test/coverage*
 .env
 
 **/.DS_Store
 **/debug
 **/debug.test
 
-# ignore binary
-gtoken
