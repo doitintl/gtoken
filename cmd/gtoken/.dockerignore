@@ -1,0 +1,19 @@
+# ide
+.vscode
+
+# binaries
+.bin
+
+# test folders
+.cover
+**/test/coverage*
+
+# env exposure
+.env
+
+# text files
+*.md
+*.todo
+docs
+
+Dockerfile
