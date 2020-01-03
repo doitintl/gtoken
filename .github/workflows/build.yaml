@@ -25,16 +25,18 @@ jobs:
     - name: build image
       env:
         DOCKER_BUILDKIT: 1
+        DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
       run: |
-        docker build --tag ${DOCKER_USERNAME}/gtoken:${IMAGE_TAG} cmd/gtoken
-        docker build --tag ${DOCKER_USERNAME}/gtoken-webhook:${IMAGE_TAG} cmd/gtoken-webhook
+        docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG} cmd/gtoken
+        docker build --tag ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG} cmd/gtoken-webhook
     
     - name: push image
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
       run: |
         echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
-        docker push ${DOCKER_USERNAME}/gtoken:${IMAGE_TAG}
-        docker push ${DOCKER_USERNAME}/gtoken-webhook:${IMAGE_TAG}
+        docker push ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}
+        docker push ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG}
         docker logout

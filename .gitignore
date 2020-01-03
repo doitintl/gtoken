@@ -9,7 +9,7 @@
 
 .bin
 **/.bin
-**/test/coverage*
+**/test
 .env
 
 **/.DS_Store

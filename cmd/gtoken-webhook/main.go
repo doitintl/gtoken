@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,7 +21,6 @@ import (
 	"github.com/urfave/cli"
 
 	corev1 "k8s.io/api/core/v1"
-	// apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,6 +39,11 @@ const (
 
 	// AWS annotation key; used to annotate Kubernetes Service Account with AWS Role ARN
 	awsRoleArnKey = "amazonaws.com/role-arn"
+
+	// AWS Web Identity Token ENV
+	awsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
+	awsRoleArn              = "AWS_ROLE_ARN"
+	awsRoleSessionName      = "AWS_ROLE_SESSION_NAME"
 )
 
 var (
@@ -46,6 +51,8 @@ var (
 	Version = "dev"
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
+	// test mode
+	testMode = false
 )
 
 type mutatingWebhook struct {
@@ -63,12 +70,15 @@ func randomInt(min, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-// Generate a random string of A-Z chars with len = l
+// Generate a random string of a-z chars with len = l
 func randomString(len int) string {
+	if testMode {
+		return strings.Repeat("0", 16)
+	}
 	rand.Seed(time.Now().UnixNano())
 	bytes := make([]byte, len)
 	for i := 0; i < len; i++ {
-		bytes[i] = byte(randomInt(65, 90))
+		bytes[i] = byte(randomInt(97, 122))
 	}
 	return string(bytes)
 }
@@ -122,9 +132,9 @@ func (mw *mutatingWebhook) getAwsRoleArn(name string, ns string) (string, bool, 
 	return roleArn, ok, nil
 }
 
-func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSpec *corev1.PodSpec, roleArn string, ns string) (bool, error) {
+func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleArn string, ns string) bool {
 	if len(containers) == 0 {
-		return false, nil
+		return false
 	}
 	for i, container := range containers {
 		// add token volume mount
@@ -137,25 +147,25 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, podSp
 		// add AWS Web Identity Token environment variables to container
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
-				Name:  "AWS_WEB_IDENTITY_TOKEN_FILE",
+				Name:  awsWebIdentityTokenFile,
 				Value: mw.volumePath,
 			},
 			{
-				Name:  "AWS_ROLE_ARN",
+				Name:  awsRoleArn,
 				Value: roleArn,
 			},
 			{
-				Name:  "AWS_ROLE_SESSION_NAME",
+				Name:  awsRoleSessionName,
 				Value: fmt.Sprintf("gtoken-webhook-%s", randomString(16)),
 			},
 		}...)
 		// update containers
 		containers[i] = container
 	}
-	return true, nil
+	return true
 }
 
-func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, image string, pullPolicy string, volumeName string, volumePath string, dryRun bool) error {
+func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) error {
 	// get service account AWS Role ARN annotation
 	roleArn, ok, err := mw.getAwsRoleArn(pod.Spec.ServiceAccountName, ns)
 	if err != nil {
@@ -166,20 +176,14 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, image string, p
 		return nil
 	}
 	// mutate Pod init containers
-	initContainersMutated, err := mw.mutateContainers(pod.Spec.InitContainers, &pod.Spec, roleArn, ns)
-	if err != nil {
-		return err
-	}
+	initContainersMutated := mw.mutateContainers(pod.Spec.InitContainers, roleArn, ns)
 	if initContainersMutated {
 		logger.Debug("successfully mutated pod init containers")
 	} else {
 		logger.Debug("no pod init containers were mutated")
 	}
 	// mutate Pod containers
-	containersMutated, err := mw.mutateContainers(pod.Spec.Containers, &pod.Spec, roleArn, ns)
-	if err != nil {
-		return err
-	}
+	containersMutated := mw.mutateContainers(pod.Spec.Containers, roleArn, ns)
 	if containersMutated {
 		logger.Debug("successfully mutated pod containers")
 	} else {
@@ -188,10 +192,10 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, image string, p
 
 	if initContainersMutated || containersMutated {
 		// prepend gtoken init container
-		pod.Spec.InitContainers = append([]corev1.Container{getGtokenInitContainer(pod.Spec.SecurityContext, image, pullPolicy, volumeName, volumePath)}, pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append([]corev1.Container{getGtokenInitContainer(pod.Spec.SecurityContext, mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
 		// append empty gtoken volume
-		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(volumeName, logger))
+		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName, logger))
 		logger.Debug("successfully appended pod spec volumes")
 	}
 
@@ -214,7 +218,7 @@ func getGtokenInitContainer(podSecurityContext *corev1.PodSecurityContext, image
 		Name:            "generate-gcp-id-token",
 		Image:           image,
 		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-		Command:         []string{fmt.Sprintf("gtoken --file=%s", volumePath)},
+		Command:         []string{"gtoken", fmt.Sprintf("--file=%s", volumePath)},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      volumeName,
@@ -265,7 +269,7 @@ func before(c *cli.Context) error {
 func (mw *mutatingWebhook) podMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePod(v, whcontext.GetAdmissionRequest(ctx).Namespace, mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, whcontext.IsAdmissionRequestDryRun(ctx))
+		return false, mw.mutatePod(v, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	default:
 		return false, nil
 	}
