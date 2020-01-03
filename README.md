@@ -3,3 +3,25 @@
 # gtoken
 
 The `gtoken` tool can get Google Cloud ID token when running with under GCP Service Account (for example, GKE Pod with Workload Identity).
+
+## command syntax
+
+```text
+NAME:
+   gtoken - generate ID token with current Google Cloud service account
+
+USAGE:
+   gtoken [global options] command [command options] [arguments...]
+
+VERSION:
+   v0.1.6-dirty
+
+COMMANDS:
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --refresh      auto refresh ID token before it expires (default: true)
+   --file value   write ID token into file (stdout, if not specified)
+   --help, -h     show help (default: false)
+   --version, -v  print the version
+```

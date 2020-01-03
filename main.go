@@ -77,7 +77,8 @@ func generateIDToken(ctx context.Context, serviceAccount string) (string, error)
 	generateIDTokenResponse, err := iamCredentialsClient.Projects.ServiceAccounts.GenerateIdToken(
 		fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount),
 		&iamcredentials.GenerateIdTokenRequest{
-			Audience: "32555940559.apps.googleusercontent.com",
+			Audience:     serviceAccount,
+			IncludeEmail: true,
 		},
 	).Do()
 	if err != nil {
@@ -163,7 +164,6 @@ func generateIDTokenCmd(c *cli.Context) error {
 			if c.Bool("refresh") {
 				// get token duration
 				duration, err = getTokenDuration(token)
-				// debug reduce duration
 				if err != nil {
 					return err
 				}
@@ -212,11 +212,11 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:  "file",
-				Usage: "write ID token into file",
+				Usage: "write ID token into file (stdout, if not specified)",
 			},
 		},
 		Name:    "gtoken",
-		Usage:   "generate GCP ID token with current service account",
+		Usage:   "generate ID token with current Google Cloud service account",
 		Action:  generateIDTokenCmd,
 		Version: Version,
 	}
