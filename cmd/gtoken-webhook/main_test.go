@@ -200,7 +200,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						corev1.Container{
 							Name:    "generate-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
-							Command: []string{"gtoken", "--file=test-volume-path"},
+							Command: []string{"/gtoken", "--file=test-volume-path"},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
