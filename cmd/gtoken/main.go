@@ -207,7 +207,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "refresh",
-				Value: true,
+				Value: false,
 				Usage: "auto refresh ID token before it expires",
 			},
 			&cli.StringFlag{
