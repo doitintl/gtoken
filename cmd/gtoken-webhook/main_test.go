@@ -25,6 +25,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 		pullPolicy string
 		volumeName string
 		volumePath string
+		tokenFile  string
 	}
 	type args struct {
 		containers []corev1.Container
@@ -43,7 +44,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient:  fake.NewSimpleClientset(),
 				volumeName: "test-volume-name",
-				volumePath: "test-volume-path",
+				volumePath: "/test-volume-path",
+				tokenFile:  "test-token",
 			},
 			args: args{
 				containers: []corev1.Container{
@@ -59,9 +61,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				corev1.Container{
 					Name:         "TestContainer",
 					Image:        "test-image",
-					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "test-volume-path"}},
+					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
 					Env: []corev1.EnvVar{
-						{Name: awsWebIdentityTokenFile, Value: "test-volume-path"},
+						{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
 						{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
 						{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 					},
@@ -74,7 +76,8 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient:  fake.NewSimpleClientset(),
 				volumeName: "test-volume-name",
-				volumePath: "test-volume-path",
+				volumePath: "/test-volume-path",
+				tokenFile:  "test-token",
 			},
 			args: args{
 				containers: []corev1.Container{
@@ -94,9 +97,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				corev1.Container{
 					Name:         "TestContainer1",
 					Image:        "test-image-1",
-					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "test-volume-path"}},
+					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
 					Env: []corev1.EnvVar{
-						{Name: awsWebIdentityTokenFile, Value: "test-volume-path"},
+						{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
 						{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
 						{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 					},
@@ -104,9 +107,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				corev1.Container{
 					Name:         "TestContainer2",
 					Image:        "test-image-2",
-					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "test-volume-path"}},
+					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
 					Env: []corev1.EnvVar{
-						{Name: awsWebIdentityTokenFile, Value: "test-volume-path"},
+						{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
 						{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
 						{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 					},
@@ -119,7 +122,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			fields: fields{
 				k8sClient:  fake.NewSimpleClientset(),
 				volumeName: "test-volume-name",
-				volumePath: "test-volume-path",
+				volumePath: "/test-volume-path",
 			},
 			args: args{
 				roleArn: "arn:aws:iam::123456789012:role/testrole",
@@ -136,6 +139,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				pullPolicy: tt.fields.pullPolicy,
 				volumeName: tt.fields.volumeName,
 				volumePath: tt.fields.volumePath,
+				tokenFile:  tt.fields.tokenFile,
 			}
 			got := mw.mutateContainers(tt.args.containers, tt.args.roleArn, tt.args.ns)
 			if got != tt.mutated {
@@ -155,6 +159,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 		pullPolicy string
 		volumeName string
 		volumePath string
+		tokenFile  string
 	}
 	type args struct {
 		pod                *corev1.Pod
@@ -176,7 +181,8 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				image:      "doitintl/gtoken:test",
 				pullPolicy: "Always",
 				volumeName: "test-volume-name",
-				volumePath: "test-volume-path",
+				volumePath: "/test-volume-path",
+				tokenFile:  "test-token",
 			},
 			args: args{
 				pod: &corev1.Pod{
@@ -200,7 +206,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						corev1.Container{
 							Name:    "generate-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
-							Command: []string{"/gtoken", "--file=test-volume-path"},
+							Command: []string{"/gtoken", "--file=/test-volume-path/test-token"},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -210,7 +216,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "test-volume-name",
-									MountPath: "test-volume-path",
+									MountPath: "/test-volume-path",
 								},
 							},
 							ImagePullPolicy: "Always",
@@ -220,9 +226,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						corev1.Container{
 							Name:         "TestContainer",
 							Image:        "test-image",
-							VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "test-volume-path"}},
+							VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
 							Env: []corev1.EnvVar{
-								{Name: awsWebIdentityTokenFile, Value: "test-volume-path"},
+								{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
 								{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
 								{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 							},
@@ -258,6 +264,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				pullPolicy: tt.fields.pullPolicy,
 				volumeName: tt.fields.volumeName,
 				volumePath: tt.fields.volumePath,
+				tokenFile:  tt.fields.tokenFile,
 			}
 			if err := mw.mutatePod(tt.args.pod, tt.args.ns, tt.args.dryRun); (err != nil) != tt.wantErr {
 				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, tt.wantErr)

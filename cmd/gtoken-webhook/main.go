@@ -37,6 +37,9 @@ const (
 	// tokenVolumePath is the mount path where the generated id token will be stored
 	tokenVolumePath = "/var/run/secrets/aws/token"
 
+	// token file name
+	tokenFileName = "gtoken"
+
 	// AWS annotation key; used to annotate Kubernetes Service Account with AWS Role ARN
 	awsRoleArnKey = "amazonaws.com/role-arn"
 
@@ -61,6 +64,7 @@ type mutatingWebhook struct {
 	pullPolicy string
 	volumeName string
 	volumePath string
+	tokenFile  string
 }
 
 var logger *log.Logger
@@ -148,7 +152,7 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleA
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
 				Name:  awsWebIdentityTokenFile,
-				Value: mw.volumePath,
+				Value: fmt.Sprintf("%s/%s", mw.volumePath, mw.tokenFile),
 			},
 			{
 				Name:  awsRoleArn,
@@ -192,7 +196,7 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 
 	if initContainersMutated || containersMutated {
 		// prepend gtoken init container
-		pod.Spec.InitContainers = append([]corev1.Container{getGtokenInitContainer(pod.Spec.SecurityContext, mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath)}, pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append([]corev1.Container{getGtokenInitContainer(pod.Spec.SecurityContext, mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
 		// append empty gtoken volume
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName, logger))
@@ -213,12 +217,12 @@ func getGtokenVolume(volumeName string, logger *log.Logger) corev1.Volume {
 	}
 }
 
-func getGtokenInitContainer(podSecurityContext *corev1.PodSecurityContext, image string, pullPolicy string, volumeName string, volumePath string) corev1.Container {
+func getGtokenInitContainer(podSecurityContext *corev1.PodSecurityContext, image string, pullPolicy string, volumeName string, volumePath string, tokenFile string) corev1.Container {
 	return corev1.Container{
 		Name:            "generate-gcp-id-token",
 		Image:           image,
 		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-		Command:         []string{"/gtoken", fmt.Sprintf("--file=%s", volumePath)},
+		Command:         []string{"/gtoken", fmt.Sprintf("--file=%s/%s", volumePath, tokenFile)},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      volumeName,
@@ -288,6 +292,7 @@ func runWebhook(c *cli.Context) error {
 		pullPolicy: c.String("pull-policy"),
 		volumeName: c.String("volume-name"),
 		volumePath: c.String("volume-path"),
+		tokenFile:  c.String("token-file"),
 	}
 
 	mutator := mutating.MutatorFunc(mutatingWebhook.podMutator)
@@ -396,6 +401,11 @@ func main() {
 					Name:  "volume-path",
 					Usage: "mount volume path",
 					Value: tokenVolumePath,
+				},
+				cli.StringFlag{
+					Name:  "token-file",
+					Usage: "token file name",
+					Value: tokenFileName,
 				},
 			},
 			Usage:       "mutation admission webhook",
