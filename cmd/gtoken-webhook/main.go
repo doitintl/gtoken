@@ -218,7 +218,7 @@ func getGtokenInitContainer(podSecurityContext *corev1.PodSecurityContext, image
 		Name:            "generate-gcp-id-token",
 		Image:           image,
 		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-		Command:         []string{"gtoken", fmt.Sprintf("--file=%s", volumePath)},
+		Command:         []string{"/gtoken", fmt.Sprintf("--file=%s", volumePath)},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      volumeName,

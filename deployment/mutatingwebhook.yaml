@@ -1,0 +1,21 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-gtoken-webhook-cfg
+  labels:
+    app: gtoken-webhook
+webhooks:
+  - name: gtoken.doit-intl.com
+    clientConfig:
+      service:
+        name: gtoken-webhook-svc
+        namespace: default
+        path: "/pods"
+      caBundle: ${CA_BUNDLE}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["pods"]
+
+

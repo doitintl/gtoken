@@ -10,6 +10,7 @@
 .bin
 **/.bin
 **/test
+**/*-bundle.yaml
 .env
 
 **/.DS_Store
