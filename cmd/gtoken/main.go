@@ -28,6 +28,8 @@ var (
 	Version = "dev"
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
+	// default aud
+	defaultAud = "gtoken/sts/assume-role-with-web-identity"
 )
 
 func getServiceAccountID(ctx context.Context) (string, error) {
@@ -77,7 +79,7 @@ func generateIDToken(ctx context.Context, serviceAccount string) (string, error)
 	generateIDTokenResponse, err := iamCredentialsClient.Projects.ServiceAccounts.GenerateIdToken(
 		fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount),
 		&iamcredentials.GenerateIdTokenRequest{
-			Audience:     serviceAccount,
+			Audience:     defaultAud,
 			IncludeEmail: true,
 		},
 	).Do()

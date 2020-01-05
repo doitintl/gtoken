@@ -195,11 +195,11 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 	}
 
 	if initContainersMutated || containersMutated {
-		// prepend gtoken init container
+		// prepend gtoken init container (as first in it container)
 		pod.Spec.InitContainers = append([]corev1.Container{getGtokenContainer(pod.Spec.SecurityContext, "generate-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
-		// prepend sidekick gtoken update container
-		pod.Spec.Containers = append([]corev1.Container{getGtokenContainer(pod.Spec.SecurityContext, "update-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true)}, pod.Spec.Containers...)
+		// append sidekick gtoken update container (as last container)
+		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer(pod.Spec.SecurityContext, "update-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
 		logger.Debug("successfully prepended pod sidekick containers to spec")
 		// append empty gtoken volume
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName, logger))

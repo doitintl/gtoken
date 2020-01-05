@@ -224,6 +224,16 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 					},
 					Containers: []corev1.Container{
 						corev1.Container{
+							Name:         "TestContainer",
+							Image:        "test-image",
+							VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
+							Env: []corev1.EnvVar{
+								{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
+								{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
+								{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
+							},
+						},
+						corev1.Container{
 							Name:    "update-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
 							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=true"},
@@ -240,16 +250,6 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								},
 							},
 							ImagePullPolicy: "Always",
-						},
-						corev1.Container{
-							Name:         "TestContainer",
-							Image:        "test-image",
-							VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
-							Env: []corev1.EnvVar{
-								{Name: awsWebIdentityTokenFile, Value: "/test-volume-path/test-token"},
-								{Name: awsRoleArn, Value: "arn:aws:iam::123456789012:role/testrole"},
-								{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
-							},
 						},
 					},
 					Volumes: []corev1.Volume{
