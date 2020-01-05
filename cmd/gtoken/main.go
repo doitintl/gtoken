@@ -225,6 +225,8 @@ func main() {
 		fmt.Printf("  Build date: %s\n", BuildDate)
 		fmt.Printf("  Built with: %s\n", runtime.Version())
 	}
+	// print version
+	log.Printf("running gtoken version: %s\n", app.Version)
 
 	err := app.Run(os.Args)
 	if err != nil {

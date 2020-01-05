@@ -206,7 +206,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						corev1.Container{
 							Name:    "generate-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
-							Command: []string{"/gtoken", "--file=/test-volume-path/test-token"},
+							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=false"},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -223,6 +223,24 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Containers: []corev1.Container{
+						corev1.Container{
+							Name:    "update-gcp-id-token",
+							Image:   "doitintl/gtoken:test",
+							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=true"},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "test-volume-name",
+									MountPath: "/test-volume-path",
+								},
+							},
+							ImagePullPolicy: "Always",
+						},
 						corev1.Container{
 							Name:         "TestContainer",
 							Image:        "test-image",

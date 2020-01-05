@@ -196,8 +196,11 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 
 	if initContainersMutated || containersMutated {
 		// prepend gtoken init container
-		pod.Spec.InitContainers = append([]corev1.Container{getGtokenInitContainer(pod.Spec.SecurityContext, mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile)}, pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append([]corev1.Container{getGtokenContainer(pod.Spec.SecurityContext, "generate-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
+		// prepend sidekick gtoken update container
+		pod.Spec.Containers = append([]corev1.Container{getGtokenContainer(pod.Spec.SecurityContext, "update-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true)}, pod.Spec.Containers...)
+		logger.Debug("successfully prepended pod sidekick containers to spec")
 		// append empty gtoken volume
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName, logger))
 		logger.Debug("successfully appended pod spec volumes")
@@ -217,12 +220,12 @@ func getGtokenVolume(volumeName string, logger *log.Logger) corev1.Volume {
 	}
 }
 
-func getGtokenInitContainer(podSecurityContext *corev1.PodSecurityContext, image string, pullPolicy string, volumeName string, volumePath string, tokenFile string) corev1.Container {
+func getGtokenContainer(podSecurityContext *corev1.PodSecurityContext, name string, image string, pullPolicy string, volumeName string, volumePath string, tokenFile string, refresh bool) corev1.Container {
 	return corev1.Container{
-		Name:            "generate-gcp-id-token",
+		Name:            name,
 		Image:           image,
 		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-		Command:         []string{"/gtoken", fmt.Sprintf("--file=%s/%s", volumePath, tokenFile)},
+		Command:         []string{"/gtoken", fmt.Sprintf("--file=%s/%s", volumePath, tokenFile), fmt.Sprintf("--refresh=%t", refresh)},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      volumeName,
@@ -317,10 +320,10 @@ func runWebhook(c *cli.Context) error {
 	}
 
 	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
-		logger.Infof("Listening on http://%s", listenAddress)
+		logger.Infof("listening on http://%s", listenAddress)
 		err = http.ListenAndServe(listenAddress, mux)
 	} else {
-		logger.Infof("Listening on https://%s", listenAddress)
+		logger.Infof("listening on https://%s", listenAddress)
 		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
 	}
 
@@ -413,6 +416,8 @@ func main() {
 			Action:      runWebhook,
 		},
 	}
+	// print version in debug mode
+	logger.WithField("version", app.Version).Debug("running gtoken-webhook")
 
 	// run main command
 	if err := app.Run(os.Args); err != nil {
