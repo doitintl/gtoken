@@ -23,6 +23,7 @@ spec:
             - server
             - --tls-cert-file=/etc/webhook/certs/cert.pem
             - --tls-private-key-file=/etc/webhook/certs/key.pem
+            - --pull-policy=Always
           volumeMounts:
             - name: webhook-certs
               mountPath: /etc/webhook/certs
