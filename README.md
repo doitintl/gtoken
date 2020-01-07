@@ -32,7 +32,7 @@ The `gtoken-webhook` is a Kubernetes mutating admission webhook, that mutates an
 
 ## `gtoken-webhook` mutation
 
-The `gtoken-webhook` injects a `gtoken` `initContainer` into a target Pod, mounts _token volume_ and injects three AWS-specific environment variables. The `gtoken` container generates a valid GCP OIDC ID Token and writes it to the _token volume_.
+The `gtoken-webhook` injects a `gtoken` `initContainer` into a target Pod and an additional `gtoken` sidekick container (to refresh an ID OIDC token a moment before expiration), mounts _token volume_ and injects three AWS-specific environment variables. The `gtoken` container generates a valid GCP OIDC ID Token and writes it to the _token volume_.
 
 Injected AWS environment variables:
 
@@ -44,11 +44,98 @@ The AWS SDK will automatically make the corresponding `AssumeRoleWithWebIdentity
 
 ## `gtoken-webhook` deployment
 
-_WILL BE DESCRIBED LATER: see `deployment` folder_
+1. To deploy the `gtoken-webhook` server, we need to create a webhook service and a deployment in our Kubernetes cluster. It’s pretty straightforward, except one thing, which is the server’s TLS configuration. If you’d care to examine the [deployment.yaml](https://github.com/doitintl/gtoken/blob/master/deployment/deployment.yaml) file, you’ll find that the certificate and corresponding private key files are read from command line arguments, and that the path to these files comes from a volume mount that points to a Kubernetes secret:
+
+```yaml
+[...]
+      args:
+      [...]
+      - --tls-cert-file=/etc/webhook/certs/cert.pem
+      - --tls-private-key-file=/etc/webhook/certs/key.pem
+      volumeMounts:
+      - name: webhook-certs
+        mountPath: /etc/webhook/certs
+        readOnly: true
+[...]
+   volumes:
+   - name: webhook-certs
+     secret:
+       secretName: gtoken-webhook-certs
+```
+
+The most important thing to remember is to set the corresponding CA certificate later in the webhook configuration, so the `apiserver` will know that it should be accepted. For now, we’ll reuse the script originally written by the Istio team to generate a certificate signing request. Then we’ll send the request to the Kubernetes API, fetch the certificate, and create the required secret from the result.
+
+First, run [webhook-create-signed-cert.sh](https://github.com/doitintl/gtoken/blob/master/deployment/webhook-create-signed-cert.sh) script and check if the secret holding the certificate and key has been created:
+
+```text
+./deployment/webhook-create-signed-cert.sh
+
+creating certs in tmpdir /var/folders/vl/gxsw2kf13jsf7s8xrqzcybb00000gp/T/tmp.xsatrckI71
+Generating RSA private key, 2048 bit long modulus
+.........................+++
+....................+++
+e is 65537 (0x10001)
+certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default created
+NAME                         AGE   REQUESTOR              CONDITION
+gtoken-webhook-svc.default   1s    alexei@doit-intl.com   Pending
+certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default approved
+secret/gtoken-webhook-certs configured
+```
+
+Once the secret is created, we can create deployment and service. These are standard Kubernetes deployment and service resources. Up until this point we’ve produced nothing but an HTTP server that’s accepting requests through a service on port 443:
+
+```sh
+kubectl create -f deployment/deployment.yaml
+
+kubectl create -f deployment/service.yaml
+```
+
+### configure mutating admission webhook
+
+Now that our webhook server is running, it can accept requests from the `apiserver`. However, we should create some configuration resources in Kubernetes first. Let’s start with our validating webhook, then we’ll configure the mutating webhook later. If you take a look at the [webhook configuration](https://github.com/doitintl/gtoken/blob/master/deployment/mutatingwebhook.yaml), you’ll notice that it contains a placeholder for `CA_BUNDLE`:
+
+```yaml
+[...]
+      service:
+        name: gtoken-webhook-svc
+        namespace: default
+        path: "/pods"
+      caBundle: ${CA_BUNDLE}
+[...]
+```
+
+There is a [small script](https://github.com/doitintl/gtoken/blob/master/deployment/webhook-patch-ca-bundle.sh) that substitutes the CA_BUNDLE placeholder in the configuration with this CA. Run this command before creating the validating webhook configuration:
+
+```sh
+cat ./deployment/mutatingwebhook.yaml | ./deployment/webhook-patch-ca-bundle.sh > ./deployment/mutatingwebhook-bundle.yaml
+```
+
+Create mutating webhook configuration:
+
+```sh
+kubectl create -f deployment/mutatingwebhook-bundle.yaml
+```
+
+### configure RBAC for gtoken-webhook
+
+Create Kubernetes Service Account to be used with `gtoken-webhook`:
+
+```sh
+kubectl create -f deployment/service-account.yaml
+```
+
+Define RBAC permission for webhook service account:
+
+```sh
+# create a cluster role
+kubectl create -f deployment/clusterrole.yaml
+# define a cluster role binding
+kubectl create 0f deployment/clusterrolebinding.yaml
+```
 
 ## Configuration Flow
 
-### Required variables
+### Flow variables
 
 - `PROJECT_ID` - GCP project ID
 - `CLUSTER_NAME` - GKE cluster name
@@ -56,6 +143,9 @@ _WILL BE DESCRIBED LATER: see `deployment` folder_
 - `GSA_ID` - Google Cloud Service Account unique ID (generated by Google)
 - `KSA_NAME` - Kubernetes Service Account name (choose any)
 - `KSA_NAMESPACE` - Kubernetes namespace
+- `AWS_ROLE_NAME` - AWS IAM role name (choose any)
+- `AWS_POLICY_NAME` - an AWS IAM policy to assign to IAM role
+- `AWS_ROLE_ARN` - AWS IAM Role ARN identifier (generated by AWS)
 
 ### GCP: Enable GKE Workload Identity
 
@@ -178,3 +268,7 @@ aws sts get-caller-identity
 }
 
 ```
+
+## External references
+
+I've borrowed an initial mutating admission webhook code and deployment guide from [banzaicloud/admission-webhook-example](https://github.com/banzaicloud/admission-webhook-example) repository. Big thanks to Banzai Cloud team!
