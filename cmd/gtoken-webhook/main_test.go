@@ -208,9 +208,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							Image:   "doitintl/gtoken:test",
 							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=false"},
 							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+									corev1.ResourceMemory: resource.MustParse(requestsMemory),
+								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("50m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
+									corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+									corev1.ResourceMemory: resource.MustParse(limitsMemory),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -238,9 +242,13 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 							Image:   "doitintl/gtoken:test",
 							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=true"},
 							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+									corev1.ResourceMemory: resource.MustParse(requestsMemory),
+								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("50m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
+									corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+									corev1.ResourceMemory: resource.MustParse(limitsMemory),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{

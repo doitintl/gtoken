@@ -28,6 +28,9 @@ var (
 	Version = "dev"
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
+)
+
+const (
 	// default aud
 	defaultAud = "gtoken/sts/assume-role-with-web-identity"
 )

@@ -58,6 +58,13 @@ var (
 	testMode = false
 )
 
+const (
+	requestsCpu    = "5m"
+	requestsMemory = "10Mi"
+	limitsCpu      = "20m"
+	limitsMemory   = "50Mi"
+)
+
 type mutatingWebhook struct {
 	k8sClient  kubernetes.Interface
 	image      string
@@ -233,9 +240,13 @@ func getGtokenContainer(podSecurityContext *corev1.PodSecurityContext, name stri
 			},
 		},
 		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+				corev1.ResourceMemory: resource.MustParse(requestsMemory),
+			},
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("50m"),
-				corev1.ResourceMemory: resource.MustParse("64Mi"),
+				corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+				corev1.ResourceMemory: resource.MustParse(limitsMemory),
 			},
 		},
 	}
