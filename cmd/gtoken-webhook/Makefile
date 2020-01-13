@@ -7,6 +7,7 @@ TESTPKGS = $(shell env GO111MODULE=on $(GO) list -f \
 			'{{ if or .TestGoFiles .XTestGoFiles }}{{ .ImportPath }}{{ end }}' \
 			$(PKGS))
 BIN      = $(CURDIR)/.bin
+GOLANGCI_LINT_CONFIG = $(CURDIR)/../../.golangci.yaml
 
 GO      = go
 TIMEOUT = 15
@@ -35,9 +36,6 @@ $(BIN)/%: | $(BIN) ; $(info $(M) building $(PACKAGE)…)
 		|| ret=$$?; \
 	   rm -rf $$tmp ; exit $$ret
 
-GOLINT = $(BIN)/golint
-$(BIN)/golint: PACKAGE=golang.org/x/lint/golint
-
 GOCOV = $(BIN)/gocov
 $(BIN)/gocov: PACKAGE=github.com/axw/gocov/...
 
@@ -46,6 +44,9 @@ $(BIN)/gocov-xml: PACKAGE=github.com/AlekSi/gocov-xml
 
 GO2XUNIT = $(BIN)/go2xunit
 $(BIN)/go2xunit: PACKAGE=github.com/tebeka/go2xunit
+
+GOLANGCI_LINT = $(BIN)/golangci-lint
+$(BIN)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 # Tests
 
@@ -84,8 +85,8 @@ test-coverage: fmt lint test-coverage-tools ; $(info $(M) running coverage tests
 	$Q $(GOCOV) convert $(COVERAGE_PROFILE) | $(GOCOVXML) > $(COVERAGE_XML)
 
 .PHONY: lint
-lint: | $(GOLINT) ; $(info $(M) running golint…) @ ## Run golint
-	$Q $(GOLINT) -set_exit_status $(PKGS)
+lint: | $(GOLANGCI_LINT) ; $(info $(M) running golangci-lint…) @ ## Run golangci-lint
+	$Q $(GOLANGCI_LINT) run -v -c $(GOLANGCI_LINT_CONFIG) .
 
 .PHONY: fmt
 fmt: ; $(info $(M) running gofmt…) @ ## Run gofmt on all source files

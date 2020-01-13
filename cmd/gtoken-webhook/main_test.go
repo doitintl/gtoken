@@ -18,6 +18,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+//nolint:funlen
 func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 	type fields struct {
 		k8sClient  kubernetes.Interface
@@ -49,7 +50,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:  "TestContainer",
 						Image: "test-image",
 					},
@@ -58,7 +59,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				ns:      "test-namespace",
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "TestContainer",
 					Image:        "test-image",
 					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
@@ -81,11 +82,11 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 			},
 			args: args{
 				containers: []corev1.Container{
-					corev1.Container{
+					{
 						Name:  "TestContainer1",
 						Image: "test-image-1",
 					},
-					corev1.Container{
+					{
 						Name:  "TestContainer2",
 						Image: "test-image-2",
 					},
@@ -94,7 +95,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				ns:      "test-namespace",
 			},
 			wantedContainers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:         "TestContainer1",
 					Image:        "test-image-1",
 					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
@@ -104,7 +105,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 						{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 					},
 				},
-				corev1.Container{
+				{
 					Name:         "TestContainer2",
 					Image:        "test-image-2",
 					VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
@@ -141,7 +142,7 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 				volumePath: tt.fields.volumePath,
 				tokenFile:  tt.fields.tokenFile,
 			}
-			got := mw.mutateContainers(tt.args.containers, tt.args.roleArn, tt.args.ns)
+			got := mw.mutateContainers(tt.args.containers, tt.args.roleArn)
 			if got != tt.mutated {
 				t.Errorf("mutatingWebhook.mutateContainers() = %v, want %v", got, tt.mutated)
 			}
@@ -152,9 +153,9 @@ func Test_mutatingWebhook_mutateContainers(t *testing.T) {
 	}
 }
 
+//nolint:funlen
 func Test_mutatingWebhook_mutatePod(t *testing.T) {
 	type fields struct {
-		k8sClient  kubernetes.Interface
 		image      string
 		pullPolicy string
 		volumeName string
@@ -188,7 +189,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				pod: &corev1.Pod{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							corev1.Container{
+							{
 								Name:  "TestContainer",
 								Image: "test-image",
 							},
@@ -203,17 +204,17 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			wantedPod: &corev1.Pod{
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
-						corev1.Container{
+						{
 							Name:    "generate-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
 							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=false"},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+									corev1.ResourceCPU:    resource.MustParse(requestsCPU),
 									corev1.ResourceMemory: resource.MustParse(requestsMemory),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+									corev1.ResourceCPU:    resource.MustParse(limitsCPU),
 									corev1.ResourceMemory: resource.MustParse(limitsMemory),
 								},
 							},
@@ -227,7 +228,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Containers: []corev1.Container{
-						corev1.Container{
+						{
 							Name:         "TestContainer",
 							Image:        "test-image",
 							VolumeMounts: []corev1.VolumeMount{{Name: "test-volume-name", MountPath: "/test-volume-path"}},
@@ -237,17 +238,17 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 								{Name: awsRoleSessionName, Value: "gtoken-webhook-" + strings.Repeat("0", 16)},
 							},
 						},
-						corev1.Container{
+						{
 							Name:    "update-gcp-id-token",
 							Image:   "doitintl/gtoken:test",
 							Command: []string{"/gtoken", "--file=/test-volume-path/test-token", "--refresh=true"},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+									corev1.ResourceCPU:    resource.MustParse(requestsCPU),
 									corev1.ResourceMemory: resource.MustParse(requestsMemory),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+									corev1.ResourceCPU:    resource.MustParse(limitsCPU),
 									corev1.ResourceMemory: resource.MustParse(limitsMemory),
 								},
 							},
@@ -261,7 +262,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 						},
 					},
 					Volumes: []corev1.Volume{
-						corev1.Volume{
+						{
 							Name: "test-volume-name",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{

@@ -65,17 +65,7 @@ func getServiceAccountEmail() (string, error) {
 
 func generateIDToken(ctx context.Context, serviceAccount string) (string, error) {
 	log.Println("generating a new ID token")
-
-	// handle the 'refresh token' command
-	cx, cancel := context.WithCancel(ctx)
-	// cancel current context on exit
-	defer cancel()
-
-	client, err := google.DefaultClient(cx, iamcredentials.CloudPlatformScope)
-	if err != nil {
-		return "", err
-	}
-	iamCredentialsClient, err := iamcredentials.New(client)
+	iamCredentialsClient, err := iamcredentials.NewService(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get iam credentials client: %s", err.Error())
 	}
@@ -97,23 +87,26 @@ func getTokenDuration(jwtToken string) (time.Duration, error) {
 	// parse JWT token
 	parser := jwt.Parser{UseJSONNumber: true, SkipClaimsValidation: true}
 	token, err := parser.Parse(jwtToken, nil)
-	//jwt.Parse(generateIDTokenResponse.Token, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse jwtToken: %s", err.Error())
+	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		unixTime, err := claims["exp"].(json.Number).Int64()
+		var unixTime int64
+		unixTime, err = claims["exp"].(json.Number).Int64()
 		if err != nil {
 			return 0, fmt.Errorf("failed to convert expire date: %s", err.Error())
 		}
-		return time.Unix(unixTime, 0).Sub(time.Now()), nil
+		return time.Until(time.Unix(unixTime, 0)), nil
 	}
 	return 0, fmt.Errorf("failed to get claims from ID token: %s", err.Error())
 }
 
-func writeToken(token string, fileName string) error {
+func writeToken(token, fileName string) error {
 	// this is a slice of io.Writers we will write the file to
 	var writers []io.Writer
 
 	// if no file provided
-	if len(fileName) == 0 {
+	if fileName == "" {
 		writers = append(writers, os.Stdout)
 	}
 
@@ -173,7 +166,7 @@ func generateIDTokenCmd(c *cli.Context) error {
 					return err
 				}
 				// reduce duration by 30s
-				duration = duration - 30*time.Second
+				duration -= 30 * time.Second
 				log.Printf("refreshing token in %s", duration)
 				// reset timer
 				timer = time.NewTimer(duration).C

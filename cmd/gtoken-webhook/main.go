@@ -27,6 +27,7 @@ import (
 	kubernetesConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
+/* #nosec */
 const (
 	// secretsInitContainer is the default gtoken container from which to pull the 'gtoken' binary.
 	gtokenInitImage = "doitintl/gtoken:latest"
@@ -59,9 +60,9 @@ var (
 )
 
 const (
-	requestsCpu    = "5m"
+	requestsCPU    = "5m"
 	requestsMemory = "10Mi"
-	limitsCpu      = "20m"
+	limitsCPU      = "20m"
 	limitsMemory   = "50Mi"
 )
 
@@ -82,13 +83,13 @@ func randomInt(min, max int) int {
 }
 
 // Generate a random string of a-z chars with len = l
-func randomString(len int) string {
+func randomString(l int) string {
 	if testMode {
 		return strings.Repeat("0", 16)
 	}
 	rand.Seed(time.Now().UnixNano())
-	bytes := make([]byte, len)
-	for i := 0; i < len; i++ {
+	bytes := make([]byte, l)
+	for i := 0; i < l; i++ {
 		bytes[i] = byte(randomInt(97, 122))
 	}
 	return string(bytes)
@@ -133,7 +134,7 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 }
 
 // check if K8s Service Account is annotated with AWS role
-func (mw *mutatingWebhook) getAwsRoleArn(name string, ns string) (string, bool, error) {
+func (mw *mutatingWebhook) getAwsRoleArn(name, ns string) (string, bool, error) {
 	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		logger.WithFields(log.Fields{"service account": name, "namespace": ns}).WithError(err).Fatalf("error getting service account")
@@ -143,7 +144,7 @@ func (mw *mutatingWebhook) getAwsRoleArn(name string, ns string) (string, bool, 
 	return roleArn, ok, nil
 }
 
-func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleArn string, ns string) bool {
+func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleArn string) bool {
 	if len(containers) == 0 {
 		return false
 	}
@@ -187,36 +188,38 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 		return nil
 	}
 	// mutate Pod init containers
-	initContainersMutated := mw.mutateContainers(pod.Spec.InitContainers, roleArn, ns)
+	initContainersMutated := mw.mutateContainers(pod.Spec.InitContainers, roleArn)
 	if initContainersMutated {
 		logger.Debug("successfully mutated pod init containers")
 	} else {
 		logger.Debug("no pod init containers were mutated")
 	}
 	// mutate Pod containers
-	containersMutated := mw.mutateContainers(pod.Spec.Containers, roleArn, ns)
+	containersMutated := mw.mutateContainers(pod.Spec.Containers, roleArn)
 	if containersMutated {
 		logger.Debug("successfully mutated pod containers")
 	} else {
 		logger.Debug("no pod containers were mutated")
 	}
 
-	if initContainersMutated || containersMutated {
+	if (initContainersMutated || containersMutated) && !dryRun {
 		// prepend gtoken init container (as first in it container)
-		pod.Spec.InitContainers = append([]corev1.Container{getGtokenContainer(pod.Spec.SecurityContext, "generate-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
+		pod.Spec.InitContainers = append([]corev1.Container{getGtokenContainer("generate-gcp-id-token",
+			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
 		// append sidekick gtoken update container (as last container)
-		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer(pod.Spec.SecurityContext, "update-gcp-id-token", mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
+		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer("update-gcp-id-token",
+			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
 		logger.Debug("successfully prepended pod sidekick containers to spec")
 		// append empty gtoken volume
-		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName, logger))
+		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName))
 		logger.Debug("successfully appended pod spec volumes")
 	}
 
 	return nil
 }
 
-func getGtokenVolume(volumeName string, logger *log.Logger) corev1.Volume {
+func getGtokenVolume(volumeName string) corev1.Volume {
 	return corev1.Volume{
 		Name: volumeName,
 		VolumeSource: corev1.VolumeSource{
@@ -227,7 +230,8 @@ func getGtokenVolume(volumeName string, logger *log.Logger) corev1.Volume {
 	}
 }
 
-func getGtokenContainer(podSecurityContext *corev1.PodSecurityContext, name string, image string, pullPolicy string, volumeName string, volumePath string, tokenFile string, refresh bool) corev1.Container {
+func getGtokenContainer(name, image, pullPolicy, volumeName, volumePath, tokenFile string,
+	refresh bool) corev1.Container {
 	return corev1.Container{
 		Name:            name,
 		Image:           image,
@@ -241,11 +245,11 @@ func getGtokenContainer(podSecurityContext *corev1.PodSecurityContext, name stri
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(requestsCpu),
+				corev1.ResourceCPU:    resource.MustParse(requestsCPU),
 				corev1.ResourceMemory: resource.MustParse(requestsMemory),
 			},
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(limitsCpu),
+				corev1.ResourceCPU:    resource.MustParse(limitsCPU),
 				corev1.ResourceMemory: resource.MustParse(limitsMemory),
 			},
 		},
@@ -300,7 +304,7 @@ func runWebhook(c *cli.Context) error {
 		logger.WithError(err).Fatal("error creating k8s client")
 	}
 
-	mutatingWebhook := mutatingWebhook{
+	webhook := mutatingWebhook{
 		k8sClient:  k8sClient,
 		image:      c.String("image"),
 		pullPolicy: c.String("pull-policy"),
@@ -309,7 +313,7 @@ func runWebhook(c *cli.Context) error {
 		tokenFile:  c.String("token-file"),
 	}
 
-	mutator := mutating.MutatorFunc(mutatingWebhook.podMutator)
+	mutator := mutating.MutatorFunc(webhook.podMutator)
 	metricsRecorder := metrics.NewPrometheus(prometheus.DefaultRegisterer)
 
 	podHandler := handlerFor(mutating.WebhookConfig{Name: "init-gtoken-pods", Obj: &corev1.Pod{}}, mutator, metricsRecorder, logger)
@@ -376,7 +380,7 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name: "server",
 			Flags: []cli.Flag{
 				cli.StringFlag{
