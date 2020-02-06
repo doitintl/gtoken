@@ -1,0 +1,10 @@
+{
+  "allow": ["MIT", "Apache-2.0", "MPL-2.0", "BSD-3-Clause", "BSD-2-Clause", "ISC"],
+  "deny": ["LGPL-2.0-or-later", "LGPL-3.0-or-later"],
+  "override": {
+    "github.com/russross/blackfriday": "BSD-2-Clause",
+    "sigs.k8s.io/yaml": "MIT",
+    "github.com/gogo/protobuf": "BSD-3-Clause",
+    "google.golang.org/api": "BSD-3-Clause"
+  }
+}
