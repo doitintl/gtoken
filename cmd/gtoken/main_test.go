@@ -9,6 +9,7 @@ import (
 	"github.com/doitintl/gtoken/internal/gcp"
 )
 
+//nolint:funlen
 func Test_generateIDToken(t *testing.T) {
 	type args struct {
 		file    string

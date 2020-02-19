@@ -22,7 +22,7 @@ var (
 	BuildDate = "unknown"
 )
 
-func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, IDToken gcp.Token, file string, refresh bool) error {
+func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string, refresh bool) error {
 	// find out active Service Account, first by ID
 	serviceAccount, err := sa.GetID(ctx)
 	if err != nil {
@@ -42,19 +42,19 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, IDToken gcp
 			return nil // avoid goroutine leak
 		case <-timer:
 			// generate ID token
-			token, err := IDToken.Generate(ctx, serviceAccount)
+			token, err := idToken.Generate(ctx, serviceAccount)
 			if err != nil {
 				return err
 			}
 			// write generated token to file or stdout
-			err = IDToken.WriteToFile(token, file)
+			err = idToken.WriteToFile(token, file)
 			if err != nil {
 				return err
 			}
 			// auto-refresh enabled
 			if refresh {
 				// get token duration
-				duration, err = IDToken.GetDuration(token)
+				duration, err = idToken.GetDuration(token)
 				if err != nil {
 					return err
 				}

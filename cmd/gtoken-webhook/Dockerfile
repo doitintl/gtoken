@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/go/mod go mod download
 COPY . .
 
 # build
-RUN make test-verbose && make
+RUN make
 
 
 #
