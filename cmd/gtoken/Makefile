@@ -48,6 +48,9 @@ $(BIN)/go2xunit: PACKAGE=github.com/tebeka/go2xunit
 GOLANGCI_LINT = $(BIN)/golangci-lint
 $(BIN)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
+GOMOCK = $(BIN)/mockery
+$(BIN)/mockery: PACKAGE=github.com/vektra/mockery/.../
+
 # Tests
 
 TEST_TARGETS := test-default test-bench test-short test-verbose test-race
@@ -87,6 +90,10 @@ test-coverage: fmt lint test-coverage-tools ; $(info $(M) running coverage tests
 .PHONY: lint
 lint: | $(GOLANGCI_LINT) ; $(info $(M) running golangci-lint…) @ ## Run golangci-lint
 	$Q $(GOLANGCI_LINT) run -v -c $(GOLANGCI_LINT_CONFIG) .
+
+.PHONY: mock
+mock: | $(GOMOCK) ; $(info $(M) generating mocks…) @ ## Run golangci-lint
+	$Q $(GOMOCK) -dir internal/gcp -inpkg -all .
 
 .PHONY: fmt
 fmt: ; $(info $(M) running gofmt…) @ ## Run gofmt on all source files

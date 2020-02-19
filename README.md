@@ -1,4 +1,4 @@
-[![](https://github.com/doitintl/gtoken/workflows/Docker%20Image%20CI/badge.svg)](https://github.com/doitintl/gtoken/actions?query=workflow%3A"Docker+Image+CI") [![Docker Pulls](https://img.shields.io/docker/pulls/doitintl/gtoken.svg?style=popout)](https://hub.docker.com/r/doitintl/gtoken) [![](https://images.microbadger.com/badges/image/doitintl/gtoken.svg)](https://microbadger.com/images/doitintl/gtoken "Get your own image badge on microbadger.com")
+[![](https://github.com/doitintl/gtoken/workflows/Docker%20Image%20CI/badge.svg)](https://github.com/doitintl/gtoken/actions?query=workflow%3A"Docker+Image+CI") [![Docker Pulls](https://img.shields.io/docker/pulls/doitintl/gtoken.svg?style=popout)](https://hub.docker.com/r/doitintl/gtoken "gtoken image") [![Docker Pulls](https://img.shields.io/docker/pulls/doitintl/gtoken-webhook.svg?style=popout)](https://hub.docker.com/r/doitintl/gtoken-webhook "gtoken-webhook image") [![](https://images.microbadger.com/badges/image/doitintl/gtoken.svg)](https://microbadger.com/images/doitintl/gtoken "gtoken image") [![](https://images.microbadger.com/badges/image/doitintl/gtoken-webhook.svg)](https://microbadger.com/images/doitintl/gtoken-webhook "gtoken-webhook image")
 
 # `gtoken`
 
@@ -12,9 +12,6 @@ NAME:
 
 USAGE:
    gtoken [global options] command [command options] [arguments...]
-
-VERSION:
-   v0.1.6-dirty
 
 COMMANDS:
    help, h  Shows a list of commands or help for one command

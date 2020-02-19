@@ -4,7 +4,7 @@
 .gtm
 
 .idea
-.vscode
+**/.vscode
 *.code-workspace
 
 .bin

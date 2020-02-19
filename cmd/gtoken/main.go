@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -13,128 +10,24 @@ import (
 	"syscall"
 	"time"
 
-	"cloud.google.com/go/compute/metadata"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/oauth2/google"
+	"github.com/doitintl/gtoken/internal/gcp"
 
-	iamcredentials "google.golang.org/api/iamcredentials/v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	// main context
-	mainCtx context.Context
 	// Version contains the current version.
 	Version = "dev"
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
 )
 
-const (
-	// default aud
-	defaultAud = "gtoken/sts/assume-role-with-web-identity"
-)
-
-func getServiceAccountID(ctx context.Context) (string, error) {
-	// handle the 'refresh token' command
-	cx, cancel := context.WithCancel(ctx)
-	// cancel current context on exit
-	defer cancel()
-	creds, err := google.FindDefaultCredentials(cx)
-	if err != nil {
-		return "", fmt.Errorf("failed to find default credentials: %s", err)
-	}
-	credsMap := make(map[string]interface{})
-	err = json.Unmarshal(creds.JSON, &credsMap)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse credentials JSON: %s", err)
-	}
-	if id, ok := credsMap["client_id"].(string); ok {
-		return id, nil
-	}
-	return "", errors.New("failed to find service account ID")
-}
-
-func getServiceAccountEmail() (string, error) {
-	email, err := metadata.Email("")
-	if err != nil {
-		return "", fmt.Errorf("failed to get default email: %s", err)
-	}
-	return email, nil
-}
-
-func generateIDToken(ctx context.Context, serviceAccount string) (string, error) {
-	log.Println("generating a new ID token")
-	iamCredentialsClient, err := iamcredentials.NewService(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to get iam credentials client: %s", err.Error())
-	}
-	generateIDTokenResponse, err := iamCredentialsClient.Projects.ServiceAccounts.GenerateIdToken(
-		fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccount),
-		&iamcredentials.GenerateIdTokenRequest{
-			Audience:     defaultAud,
-			IncludeEmail: true,
-		},
-	).Do()
-	if err != nil {
-		return "", fmt.Errorf("failed to generate ID token: %s", err.Error())
-	}
-	log.Println("successfully generated ID token")
-	return generateIDTokenResponse.Token, nil
-}
-
-func getTokenDuration(jwtToken string) (time.Duration, error) {
-	// parse JWT token
-	parser := jwt.Parser{UseJSONNumber: true, SkipClaimsValidation: true}
-	token, err := parser.Parse(jwtToken, nil)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse jwtToken: %s", err.Error())
-	}
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		var unixTime int64
-		unixTime, err = claims["exp"].(json.Number).Int64()
-		if err != nil {
-			return 0, fmt.Errorf("failed to convert expire date: %s", err.Error())
-		}
-		return time.Until(time.Unix(unixTime, 0)), nil
-	}
-	return 0, fmt.Errorf("failed to get claims from ID token: %s", err.Error())
-}
-
-func writeToken(token, fileName string) error {
-	// this is a slice of io.Writers we will write the file to
-	var writers []io.Writer
-
-	// if no file provided
-	if fileName == "" {
-		writers = append(writers, os.Stdout)
-	}
-
-	// if DestFile was provided, lets try to create it and add to the writers
-	if len(fileName) > 0 {
-		file, err := os.Create(fileName)
-		if err != nil {
-			return fmt.Errorf("failed to create token file: %s; error: %s", fileName, err.Error())
-		}
-		writers = append(writers, file)
-		defer file.Close()
-	}
-	// MultiWriter(io.Writer...) returns a single writer which multiplexes its
-	// writes across all of the writers we pass in.
-	dest := io.MultiWriter(writers...)
-	// write to dest the same way as before, copying from the Body
-	if _, err := io.WriteString(dest, token); err != nil {
-		return fmt.Errorf("failed to write token: %s", err.Error())
-	}
-	return nil
-}
-
-func generateIDTokenCmd(c *cli.Context) error {
+func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, IDToken gcp.Token, file string, refresh bool) error {
 	// find out active Service Account, first by ID
-	serviceAccount, err := getServiceAccountID(mainCtx)
+	serviceAccount, err := sa.GetID(ctx)
 	if err != nil {
 		// fallback: try to get Service Account email from metadata server
-		serviceAccount, err = getServiceAccountEmail()
+		serviceAccount, err = sa.GetEmail()
 	}
 	if err != nil {
 		return err
@@ -145,23 +38,23 @@ func generateIDTokenCmd(c *cli.Context) error {
 	for {
 		// wait for next timer tick or cancel
 		select {
-		case <-mainCtx.Done():
+		case <-ctx.Done():
 			return nil // avoid goroutine leak
 		case <-timer:
 			// generate ID token
-			token, err := generateIDToken(mainCtx, serviceAccount)
+			token, err := IDToken.Generate(ctx, serviceAccount)
 			if err != nil {
 				return err
 			}
 			// write generated token to file or stdout
-			err = writeToken(token, c.String("file"))
+			err = IDToken.WriteToFile(token, file)
 			if err != nil {
 				return err
 			}
 			// auto-refresh enabled
-			if c.Bool("refresh") {
+			if refresh {
 				// get token duration
-				duration, err = getTokenDuration(token)
+				duration, err = IDToken.GetDuration(token)
 				if err != nil {
 					return err
 				}
@@ -177,9 +70,8 @@ func generateIDTokenCmd(c *cli.Context) error {
 	}
 }
 
-func init() {
-	// handle termination signal
-	mainCtx = handleSignals()
+func generateIDTokenCmd(c *cli.Context) error {
+	return generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
 }
 
 func handleSignals() context.Context {
