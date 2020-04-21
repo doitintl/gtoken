@@ -42,5 +42,6 @@ jobs:
       run: |
         echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
         docker push ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}
+        docker push ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}-alpine
         docker push ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG}
         docker logout
