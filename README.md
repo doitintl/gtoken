@@ -176,9 +176,12 @@ Update `GSA_NAME` Google Service Account with following roles:
 - `roles/iam.serviceAccountTokenCreator` - impersonate service accounts to create OAuth2 access tokens, sign blobs, or sign JWTs
 
 ```sh
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member serviceAccount:${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
+  --role roles/iam.serviceAccountTokenCreator
+
 gcloud iam service-accounts add-iam-policy-binding \
   --role roles/iam.workloadIdentityUser \
-  --role roles/iam.serviceAccountTokenCreator \
   --member "serviceAccount:${PROJECT_ID}.svc.id.goog[${K8S_NAMESPACE}/${KSA_NAME}]" \
   ${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
 ```
