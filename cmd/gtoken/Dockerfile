@@ -34,7 +34,9 @@ RUN make
 #
 FROM alpine:3.11 as certs
 RUN apk --update add ca-certificates
-
+# this is for debug only Alpine image
+COPY --from=build /go/src/gtoken/.bin/github.com/doitintl/gtoken /gtoken
+ENTRYPOINT ["/gtoken"]
 
 #
 # ------ gtoken release Docker image ------

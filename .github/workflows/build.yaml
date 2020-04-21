@@ -20,6 +20,8 @@ jobs:
     - name: decide on tag
       run: |
         image_tag=$(echo $GITHUB_REF | sed -e 's/refs\/heads\///g' -e 's/refs\/tags\///g' | sed -e 's/master/latest/g')
+        echo "${image_tag}" > ./cmd/gtoken/.version
+        echo "${image_tag}" > ./cmd/gtoken-webhook/.version
         echo "::debug::decide on image tag ${image_tag}"
         echo "::set-env name=IMAGE_TAG::${image_tag}"
 
@@ -29,6 +31,7 @@ jobs:
         DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
       run: |
         docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG} cmd/gtoken
+        docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}-alpine --target certs cmd/gtoken
         docker build --tag ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG} cmd/gtoken-webhook
     
     - name: push image
