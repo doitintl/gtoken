@@ -53,7 +53,7 @@ func (IDToken) Generate(ctx context.Context, serviceAccount string) (string, err
 func (IDToken) GetDuration(jwtToken string) (time.Duration, error) {
 	// parse JWT token
 	parser := jwt.Parser{UseJSONNumber: true, SkipClaimsValidation: true}
-	token, err := parser.Parse(jwtToken, nil)
+	token, _, err := parser.ParseUnverified(jwtToken, jwt.MapClaims{})
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse jwtToken: %s", err.Error())
 	}

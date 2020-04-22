@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -67,14 +68,20 @@ func (sa SaInfo) GetID(ctx context.Context) (string, error) {
 	log.Println("getting scopes")
 	availableScopes, err := metadataClient.Scopes("")
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get available scopes")
+		log.Printf("failed to get available scopes: %s\n", err)
 	}
+	// print scopes and search for cloud-platform scope
+	var found bool
 	for _, s := range availableScopes {
 		log.Printf("scope: %s", s)
+		if strings.Contains(s, "cloud-platform") {
+			found = true
+		}
 	}
-	// if !availableSet.Has("https://www.googleapis.com/auth/cloud-platform") {
-	// 	return "", errors.Wrap(err, "missing the required 'cloud-platform' scope")
-	// }
+	if !found {
+		log.Println("appending cloud-platform scope")
+		availableScopes = append(availableScopes, "https://www.googleapis.com/auth/cloud-platform")
+	}
 	log.Println("getting credentials")
 	creds, err := google.FindDefaultCredentials(cx, availableScopes...)
 	if err != nil {
