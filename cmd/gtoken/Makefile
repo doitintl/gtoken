@@ -10,6 +10,7 @@ BIN      = $(CURDIR)/.bin
 GOLANGCI_LINT_CONFIG = $(CURDIR)/.golangci.yaml
 
 GO      = go
+GOLANGCI_LINT = golangci-lint
 TIMEOUT = 15
 V = 0
 Q = $(if $(filter 1,$V),,@)
@@ -44,9 +45,6 @@ $(BIN)/gocov-xml: PACKAGE=github.com/AlekSi/gocov-xml
 
 GO2XUNIT = $(BIN)/go2xunit
 $(BIN)/go2xunit: PACKAGE=github.com/tebeka/go2xunit
-
-GOLANGCI_LINT = $(BIN)/golangci-lint
-$(BIN)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 GOMOCK = $(BIN)/mockery
 $(BIN)/mockery: PACKAGE=github.com/vektra/mockery/.../
@@ -88,7 +86,7 @@ test-coverage: fmt lint test-coverage-tools ; $(info $(M) running coverage tests
 	$Q $(GOCOV) convert $(COVERAGE_PROFILE) | $(GOCOVXML) > $(COVERAGE_XML)
 
 .PHONY: lint
-lint: | $(GOLANGCI_LINT) ; $(info $(M) running golangci-lint…) @ ## Run golangci-lint
+lint: | $(info $(M) running golangci-lint…) ## Run golangci-lint
 	$Q $(GOLANGCI_LINT) run -v -c $(GOLANGCI_LINT_CONFIG) .
 
 .PHONY: mock

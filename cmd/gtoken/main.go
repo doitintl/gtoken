@@ -26,6 +26,7 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 	// find out active Service Account, first by ID
 	serviceAccount, err := sa.GetID(ctx)
 	if err != nil {
+		log.Printf("failed to get service account, fallback to metadata email: %s\n", err)
 		// fallback: try to get Service Account email from metadata server
 		serviceAccount, err = sa.GetEmail()
 	}
