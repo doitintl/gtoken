@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/doitintl/gtoken/internal/aws"
 	"github.com/doitintl/gtoken/internal/gcp"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,6 +21,16 @@ var (
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
 )
+
+const awsFileVariablesPathEnv = "AWS_FILE_VARIABLES_PATH"
+
+func generateEnvFileVariables(fileVariables aws.FileVariables) error {
+	path, ok := os.LookupEnv(awsFileVariablesPathEnv)
+	if !ok {
+		return fmt.Errorf("no-webhook: could not read AWS file variables path from %s", awsFileVariablesPathEnv)
+	}
+	return fileVariables.GenerateToFile(path)
+}
 
 func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string, refresh bool) error {
 	// find out active Service Account, first by ID
@@ -72,7 +82,15 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 }
 
 func generateIDTokenCmd(c *cli.Context) error {
-	return generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
+	if c.Bool("no-webhook") {
+		if err := generateEnvFileVariables(aws.NewAWSEnvFileVariables()); err != nil {
+			return err
+		}
+	}
+	if err := generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh")); err != nil {
+		return err
+	}
+	return nil
 }
 
 func handleSignals() context.Context {
@@ -104,6 +122,11 @@ func main() {
 			&cli.StringFlag{
 				Name:  "file",
 				Usage: "write ID token into file (stdout, if not specified)",
+			},
+			&cli.BoolFlag{
+				Name:  "no-webhook",
+				Value: false,
+				Usage: "compatibility flag for Kubernetes clusters where mutating webhooks cannot be installed, such as GKE Autopilot",
 			},
 		},
 		Name:    "gtoken",

@@ -145,7 +145,7 @@ func Test_generateIDToken(t *testing.T) {
 				cancel()
 			}()
 			if err := generateIDToken(ctx, mockSA, mockToken, tt.args.file, tt.args.refresh); (err != nil) != tt.wantErr {
-				t.Errorf("generateIDToken() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GenerateIDToken() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			mockSA.AssertExpectations(t)
 			mockToken.AssertExpectations(t)
