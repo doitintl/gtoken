@@ -46,11 +46,6 @@ func (EnvFileVariables) GenerateToFile(fileName string) error {
 	// this is a slice of io.Writers we will write the file to
 	var writers []io.Writer
 
-	// if no file provided
-	if fileName == "" {
-		writers = append(writers, os.Stdout)
-	}
-
 	// if DestFile was provided, lets try to create it and add to the writers
 	if len(fileName) > 0 {
 		file, err := os.Create(fileName)

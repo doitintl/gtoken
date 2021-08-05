@@ -14,6 +14,7 @@ func Test_generateIDToken(t *testing.T) {
 	type args struct {
 		file    string
 		refresh bool
+		daemon  bool
 	}
 	type fields struct {
 		email string
@@ -144,7 +145,7 @@ func Test_generateIDToken(t *testing.T) {
 				time.Sleep(time.Second)
 				cancel()
 			}()
-			if err := generateIDToken(ctx, mockSA, mockToken, tt.args.file, tt.args.refresh); (err != nil) != tt.wantErr {
+			if err := handleIDToken(ctx, mockSA, mockToken, tt.args.file, tt.args.refresh, tt.args.daemon); (err != nil) != tt.wantErr {
 				t.Errorf("GenerateIDToken() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			mockSA.AssertExpectations(t)
