@@ -79,6 +79,7 @@ var logger *log.Logger
 
 // Returns an int >= min, < max
 func randomInt(min, max int) int {
+	//nolint:gosec
 	return min + rand.Intn(max-min)
 }
 

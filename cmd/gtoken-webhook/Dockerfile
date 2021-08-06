@@ -3,7 +3,7 @@
 #
 # ----- Go Builder Image ------
 #
-FROM golang:1.14-alpine AS builder
+FROM golang:1.16-alpine AS builder
 
 # curl git bash
 RUN apk add --no-cache curl git bash make
@@ -32,7 +32,7 @@ RUN make
 #
 # ------ get latest CA certificates
 #
-FROM alpine:3.11 as certs
+FROM alpine:3.14 as certs
 RUN apk --update add ca-certificates
 
 
