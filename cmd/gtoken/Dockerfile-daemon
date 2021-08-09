@@ -15,20 +15,20 @@ COPY --from=golangci/golangci-lint:v1.24-alpine /usr/bin/golangci-lint /usr/bin
 FROM builder as build
 
 # set working directorydoc
-RUN mkdir -p /go/src/gtoken
-WORKDIR /go/src/gtoken
+RUN mkdir -p /go/src/gtoken/gtoken-daemon /go/src/gtoken/internal
+WORKDIR /go/src/gtoken/gtoken-daemon
 
 # load dependency
-COPY go.mod .
-COPY go.sum .
+COPY daemon/go.mod .
+COPY daemon/go.sum .
+COPY internal/ ../internal/
 RUN --mount=type=cache,target=/go/mod go mod download
 
 # copy sources
-COPY . .
+COPY daemon/* .
 
 # build
 RUN make
-
 
 #
 # ------ get latest CA certificates
@@ -46,5 +46,5 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 
 # this is the last command since it's never cached
 
-COPY --from=build /go/src/gtoken/.bin/github.com/doitintl/daemon /gtoken-daemon
+COPY --from=build /go/src/gtoken/gtoken-daemon/.bin/github.com/doitintl/gtoken/daemon /gtoken-daemon
 ENTRYPOINT ["/gtoken-daemon"]
