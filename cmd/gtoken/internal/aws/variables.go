@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
+	"strings"
 	"time"
 )
 
 /* #nosec */
 const (
 	// AWS Web Identity Token ENV
-	awsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
-	awsRoleArn              = "AWS_ROLE_ARN"
-	awsRoleSessionName      = "AWS_ROLE_SESSION_NAME"
+	AwsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
+	AwsRoleArn              = "AWS_ROLE_ARN"
+	AwsRoleSessionName      = "AWS_ROLE_SESSION_NAME"
 )
 
 type AWSEnvVariables interface {
-	Generate() ([]string, error)
+	Generate(string, string) ([]string, error)
 }
 
 type AWSVariables struct{}
@@ -26,21 +26,19 @@ func NewAWSEnvVariables() AWSEnvVariables {
 	return &AWSVariables{}
 }
 
-func (AWSVariables) Generate() ([]string, error) {
-	roleArn, ok := os.LookupEnv(awsRoleArn)
-	if !ok {
-		return nil, fmt.Errorf("could not read from environment variable %s", awsRoleArn)
-	}
-	tokenFilePath, ok := os.LookupEnv(awsWebIdentityTokenFile)
-	if !ok {
-		return nil, fmt.Errorf("could not read from environment variable %s", awsWebIdentityTokenFile)
-	}
+func (AWSVariables) Generate(roleArn, tokenFilePath string) ([]string, error) {
 	log.Println("generating new AWS variables")
+	if strings.EqualFold(tokenFilePath, "") {
+		return nil, fmt.Errorf("environment variable %s cannot be empty", AwsWebIdentityTokenFile)
+	}
+	if strings.EqualFold(roleArn, "") {
+		return nil, fmt.Errorf("environment variable %s cannot be empty", AwsRoleArn)
+	}
 	roleSessionName := fmt.Sprintf("gtoken-webhook-%s", randomString(16))
 	return []string{
-		fmt.Sprintf("%s=%s", awsRoleArn, roleArn),
-		fmt.Sprintf("%s=%s", awsRoleSessionName, roleSessionName),
-		fmt.Sprintf("%s=%s", awsWebIdentityTokenFile, tokenFilePath),
+		fmt.Sprintf("%s=%s", AwsRoleArn, roleArn),
+		fmt.Sprintf("%s=%s", AwsRoleSessionName, roleSessionName),
+		fmt.Sprintf("%s=%s", AwsWebIdentityTokenFile, tokenFilePath),
 	}, nil
 
 }

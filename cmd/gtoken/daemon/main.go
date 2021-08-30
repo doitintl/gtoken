@@ -184,7 +184,15 @@ func run(ctx context.Context, wg *sync.WaitGroup, binary string, c *cli.Context,
 	cmd.Stderr = os.Stderr
 
 	// Set AWS environment variables needed by the AWS SDK for authentication
-	awsEnvVariables, err := aws.NewAWSEnvVariables().Generate()
+	roleArn, ok := os.LookupEnv(aws.AwsRoleArn)
+	if !ok {
+		return -2, fmt.Errorf("could not read from environment variable %s", aws.AwsRoleArn)
+	}
+	tokenFilePath, ok := os.LookupEnv(aws.AwsWebIdentityTokenFile)
+	if !ok {
+		return -2, fmt.Errorf("could not read from environment variable %s", aws.AwsWebIdentityTokenFile)
+	}
+	awsEnvVariables, err := aws.NewAWSEnvVariables().Generate(roleArn, tokenFilePath)
 	if err != nil {
 		log.WithError(err)
 		return -2, err
