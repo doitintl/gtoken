@@ -34,7 +34,7 @@ jobs:
       run: |
         docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG} cmd/gtoken
         docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}-alpine --target certs cmd/gtoken
-        docker build --tag ${DOCKER_REPOSITORY}/gtoken-daemon:${IMAGE_TAG} --file Dockerfile-daemon cmd/gtoken/daemon
+        docker build --tag ${DOCKER_REPOSITORY}/gtoken-daemon:${IMAGE_TAG} --file cmd/gtoken/daemon/Dockerfile-daemon cmd/gtoken/daemon
         docker build --tag ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG} cmd/gtoken-webhook
 
     - name: push image
