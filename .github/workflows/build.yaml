@@ -10,6 +10,8 @@ on:
 jobs:
 
   build:
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
  
     runs-on: ubuntu-18.04
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
@@ -32,6 +34,7 @@ jobs:
       run: |
         docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG} cmd/gtoken
         docker build --tag ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}-alpine --target certs cmd/gtoken
+        docker build --tag ${DOCKER_REPOSITORY}/gtoken-daemon:${IMAGE_TAG} cmd/gtoken/daemon
         docker build --tag ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG} cmd/gtoken-webhook
     
     - name: push image
@@ -43,5 +46,6 @@ jobs:
         echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
         docker push ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}
         docker push ${DOCKER_REPOSITORY}/gtoken:${IMAGE_TAG}-alpine
+        docker push ${DOCKER_REPOSITORY}/gtoken-daemon:${IMAGE_TAG}
         docker push ${DOCKER_REPOSITORY}/gtoken-webhook:${IMAGE_TAG}
         docker logout
