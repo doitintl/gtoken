@@ -21,6 +21,8 @@ WORKDIR /go/src/gtoken
 # load dependency
 COPY go.mod .
 COPY go.sum .
+COPY internal/aws internal/aws
+COPY internal/gcp/ internal/gcp
 RUN --mount=type=cache,target=/go/mod go mod download
 
 # copy sources
