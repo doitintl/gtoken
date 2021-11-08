@@ -10,7 +10,6 @@ require (
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/tj/assert v0.0.3
-	github.com/urfave/cli v1.22.5
 	github.com/urfave/cli/v2 v2.0.0
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
