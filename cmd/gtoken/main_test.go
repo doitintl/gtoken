@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/doitintl/gtoken/internal/gcp"
+	"github.com/tj/assert"
+	"github.com/urfave/cli/v2"
 )
 
 //nolint:funlen
@@ -151,4 +156,24 @@ func Test_generateIDToken(t *testing.T) {
 			mockToken.AssertExpectations(t)
 		})
 	}
+}
+
+func Test_generateIDTokenCmd(t *testing.T) {
+	app := cli.NewApp()
+	app.Action = generateIDTokenCmd
+	appHasRun := false
+	go func() {
+		err := app.Run([]string{"refresh", "true"})
+		appHasRun = true
+		assert.Nil(t, err, "generateIDTokenCmd should not return an error")
+	}()
+
+	for {
+		if !appHasRun {
+			continue
+		}
+		break
+	}
+
+	http.Post(fmt.Sprintf("localhost%s", ServerAddr), "", bytes.NewReader([]byte("")))
 }

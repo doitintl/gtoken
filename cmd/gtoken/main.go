@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -20,6 +22,10 @@ var (
 	Version = "dev"
 	// BuildDate contains a string with the build date.
 	BuildDate = "unknown"
+
+	ServerAddr = ":2014"
+
+	ErrContextCanceled = errors.New("context canceled")
 )
 
 func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string, refresh bool) error {
@@ -40,6 +46,7 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 		// wait for next timer tick or cancel
 		select {
 		case <-ctx.Done():
+			log.Println("context cancelled. returning....")
 			return nil // avoid goroutine leak
 		case <-timer:
 			// generate ID token
@@ -72,22 +79,52 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 }
 
 func generateIDTokenCmd(c *cli.Context) error {
-	return generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
+	mainCtx, cancel := context.WithCancel(c.Context)
+	go func() {
+		http.HandleFunc("/quitquitquit", func(rw http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				rw.WriteHeader(http.StatusMethodNotAllowed)
+				rw.Write([]byte(`{"status":"error","message":"quitquitquit must be a POST request"}`))
+				return
+			}
+
+			log.Println("Received quitquitquit request. Canceling context...")
+			cancel()
+			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte(`{"status": "ok","message":"shutdown initiated"}`))
+		})
+
+		err := http.ListenAndServe(ServerAddr, nil)
+		if err != nil {
+			log.Printf("Received error from http server: %s", err)
+			cancel() // This will cancel the main generateIDToken logic
+		}
+	}()
+	err := generateIDToken(handleSignals(mainCtx), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
+	if err == ErrContextCanceled {
+		return nil
+	}
+
+	return err
 }
 
-func handleSignals() context.Context {
+func handleSignals(baseContext context.Context) context.Context {
 	// Graceful shut-down on SIGINT/SIGTERM
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	// create cancelable context
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(baseContext)
 
 	go func() {
 		defer cancel()
-		sid := <-sig
-		log.Printf("received signal: %d\n", sid)
-		log.Println("canceling token refresh ...")
+		select {
+		case <-ctx.Done():
+			log.Println("context cancelled. exiting goroutine...")
+		case sid := <-sig:
+			log.Printf("received signal: %d\n", sid)
+			log.Println("canceling token refresh ...")
+		}
 	}()
 
 	return ctx
