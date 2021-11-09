@@ -180,7 +180,7 @@ func Test_generateIDTokenCmd(t *testing.T) {
 		wg.Done()
 	}()
 
-	resp, err := http.Post(fmt.Sprintf("http://localhost%s/quitquitquit", ServerAddr), "", bytes.NewReader([]byte("")))
+	resp, err := http.Post(fmt.Sprintf("http://0.0.0.0%s/quitquitquit", ServerAddr), "", bytes.NewReader([]byte("")))
 	if err != nil {
 		t.Errorf("shouldn't receive an error while posting to webserver: %s", err)
 		return
