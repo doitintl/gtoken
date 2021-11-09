@@ -41,6 +41,7 @@ steps:
         from_secret: github_token
     settings:
       context: cmd/gtoken
+      dockerfile: cmd/gtoken/Dockerfile
       username: drone
       password:
         from_secret: harbor_drone_pass
@@ -63,6 +64,7 @@ steps:
         from_secret: github_token
     settings:
       context: cmd/gtoken
+      dockerfile: cmd/gtoken-webhook/Dockerfile
       username: drone
       password:
         from_secret: harbor_drone_pass
