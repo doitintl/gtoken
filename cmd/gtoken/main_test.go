@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/doitintl/gtoken/internal/gcp"
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli/v2"
+	"github.com/stretchr/testify/mock"
 )
 
 //nolint:funlen
@@ -42,7 +43,7 @@ func Test_generateIDToken(t *testing.T) {
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
 				sa.On("GetID", ctx).Return(fields.email, nil)
-				token.On("Generate", ctx, fields.email).Return(fields.jwt, nil)
+				token.On("Generate", ctx, fields.email).Return("whatever", nil)
 				token.On("WriteToFile", fields.jwt, args.file).Return(nil)
 			},
 		},
@@ -159,21 +160,32 @@ func Test_generateIDToken(t *testing.T) {
 }
 
 func Test_generateIDTokenCmd(t *testing.T) {
-	app := cli.NewApp()
-	app.Action = generateIDTokenCmd
-	appHasRun := false
+	ctx := context.Background()
+	mockSA := &gcp.MockServiceAccountInfo{}
+	mockToken := &gcp.MockToken{}
+	fileName := "jwt.token"
+	email := "test@project.iam.gserviceaccount.com"
+	mockSA.On("GetID", mock.AnythingOfType("*context.cancelCtx")).Return(email, nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+	mockToken.On("GetDuration", "whatever").Return(31*time.Second, nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		err := app.Run([]string{"refresh", "true"})
-		appHasRun = true
-		assert.Nil(t, err, "generateIDTokenCmd should not return an error")
+		err := startServerAndGenerator(ctx, mockSA, mockToken, fileName, true)
+		assert.Nil(t, err, "generateIDTokenCmd should not return an error when context is canceled")
+		wg.Done()
 	}()
 
-	for {
-		if !appHasRun {
-			continue
-		}
-		break
+	resp, err := http.Post(fmt.Sprintf("http://localhost%s/quitquitquit", ServerAddr), "", bytes.NewReader([]byte("")))
+	if err != nil {
+		t.Errorf("shouldn't receive an error while posting to webserver: %s", err)
+		return
 	}
 
-	http.Post(fmt.Sprintf("localhost%s", ServerAddr), "", bytes.NewReader([]byte("")))
+	assert.Equal(t, resp.StatusCode, http.StatusOK, "request should return a 200")
+	wg.Wait()
 }

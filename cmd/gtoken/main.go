@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,8 +23,6 @@ var (
 	BuildDate = "unknown"
 
 	ServerAddr = ":2014"
-
-	ErrContextCanceled = errors.New("context canceled")
 )
 
 func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string, refresh bool) error {
@@ -46,7 +43,7 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 		// wait for next timer tick or cancel
 		select {
 		case <-ctx.Done():
-			log.Println("context cancelled. returning....")
+			log.Println("context canceled. returning....")
 			return nil // avoid goroutine leak
 		case <-timer:
 			// generate ID token
@@ -78,34 +75,58 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 	}
 }
 
-func generateIDTokenCmd(c *cli.Context) error {
-	mainCtx, cancel := context.WithCancel(c.Context)
-	go func() {
-		http.HandleFunc("/quitquitquit", func(rw http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost {
-				rw.WriteHeader(http.StatusMethodNotAllowed)
-				rw.Write([]byte(`{"status":"error","message":"quitquitquit must be a POST request"}`))
-				return
-			}
+func startServerAndGenerator(ctx context.Context, saInfo gcp.ServiceAccountInfo, token gcp.Token, file string, refresh bool) error {
+	mainCtx, cancel := context.WithCancel(ctx)
+	errChan := make(chan error)
+	shutdown := make(chan struct{})
 
-			log.Println("Received quitquitquit request. Canceling context...")
-			cancel()
-			rw.WriteHeader(http.StatusOK)
-			rw.Write([]byte(`{"status": "ok","message":"shutdown initiated"}`))
-		})
-
-		err := http.ListenAndServe(ServerAddr, nil)
-		if err != nil {
-			log.Printf("Received error from http server: %s", err)
-			cancel() // This will cancel the main generateIDToken logic
+	mux := http.NewServeMux()
+	mux.HandleFunc("/quitquitquit", func(rw http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			rw.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = rw.Write([]byte(`{"status":"error","message":"quitquitquit must be a POST request"}`))
+			return
 		}
-	}()
-	err := generateIDToken(handleSignals(mainCtx), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
-	if err == ErrContextCanceled {
-		return nil
-	}
 
-	return err
+		log.Println("Received quitquitquit request. Canceling context...")
+		cancel()
+		rw.WriteHeader(http.StatusOK)
+		_, _ = rw.Write([]byte(`{"status": "ok","message":"shutdown initiated"}`))
+	})
+
+	srv := &http.Server{Addr: ServerAddr, Handler: mux}
+
+	go func() {
+		err := generateIDToken(handleSignals(mainCtx), saInfo, token, file, refresh)
+		errChan <- err
+	}()
+
+	go listenForPreemption(mainCtx, srv, shutdown)
+
+	go srv.ListenAndServe()
+
+	mainErr := <-errChan
+	<-shutdown
+
+	return mainErr
+}
+
+func generateIDTokenCmd(c *cli.Context) error {
+	return startServerAndGenerator(c.Context, gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
+}
+
+func listenForPreemption(ctx context.Context, srv *http.Server, shutdown chan struct{}) {
+	<-ctx.Done()
+	log.Println("server is shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	srv.SetKeepAlivesEnabled(false)
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("could not gracefully shutdown the server: %v", err)
+	}
+	close(shutdown)
 }
 
 func handleSignals(baseContext context.Context) context.Context {
@@ -120,7 +141,7 @@ func handleSignals(baseContext context.Context) context.Context {
 		defer cancel()
 		select {
 		case <-ctx.Done():
-			log.Println("context cancelled. exiting goroutine...")
+			log.Println("context canceled. exiting goroutine...")
 		case sid := <-sig:
 			log.Printf("received signal: %d\n", sid)
 			log.Println("canceling token refresh ...")
