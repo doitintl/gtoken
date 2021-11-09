@@ -1,0 +1,43 @@
+kind: pipeline
+name: test
+workspace:
+  base: /go
+  path: src/github.com/shipt/${DRONE_REPO_NAME}
+
+trigger:
+  event:
+    - push
+    - tag
+
+steps:
+  - name: lint
+    image: golang:1.16
+    commands:
+      - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+      - go build ./...
+      - golangci-lint run
+  - name: test
+    image: golang:1.16
+    commands:
+      - go test --race -v ./...
+  - name: docker-prod-push
+    image: plugins/docker
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    settings:
+      username: drone
+      password:
+        from_secret: harbor_drone_pass
+      repo: ${DOCKER_REPO}/${DRONE_REPO_NAME}
+      registry: harbor.shipttech.com
+      tags:
+        - latest
+        - ${DRONE_TAG}
+        - ${DRONE_COMMIT_SHA}
+      build_args_from_env:
+        - GITHUB_TOKEN
+    when:
+      event:
+        include:
+          - tag
