@@ -186,6 +186,8 @@ func Test_generateIDTokenCmd(t *testing.T) {
 		return
 	}
 
+	defer resp.Body.Close()
+
 	assert.Equal(t, resp.StatusCode, http.StatusOK, "request should return a 200")
 	wg.Wait()
 }

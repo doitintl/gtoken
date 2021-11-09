@@ -103,7 +103,7 @@ func startServerAndGenerator(ctx context.Context, saInfo gcp.ServiceAccountInfo,
 
 	go listenForPreemption(mainCtx, srv, shutdown)
 
-	go srv.ListenAndServe()
+	go func() { _ = srv.ListenAndServe() }()
 
 	mainErr := <-errChan
 	<-shutdown
