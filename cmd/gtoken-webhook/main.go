@@ -78,11 +78,13 @@ type mutatingWebhook struct {
 var logger *log.Logger
 
 // Returns an int >= min, < max
+//nolint
 func randomInt(min, max int) int {
 	return min + rand.Intn(max-min)
 }
 
 // Generate a random string of a-z chars with len = l
+//nolint
 func randomString(l int) string {
 	if testMode {
 		return strings.Repeat("0", 16)
