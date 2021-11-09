@@ -40,12 +40,12 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     settings:
+      context: cmd/gtoken
       username: drone
       password:
         from_secret: harbor_drone_pass
       repo: harbor.shipttech.com/${DRONE_REPO_NAME}
       registry: harbor.shipttech.com
-      dockerfile: cmd/gtoken/Dockerfile
       tags:
         - latest
         - ${DRONE_TAG}
@@ -62,12 +62,12 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     settings:
+      context: cmd/gtoken
       username: drone
       password:
         from_secret: harbor_drone_pass
       repo: harbor.shipttech.com/${DRONE_REPO_NAME}
       registry: harbor.shipttech.com
-      dockerfile: cmd/gtoken-webhook/Dockerfile
       tags:
         - latest
         - ${DRONE_TAG}
