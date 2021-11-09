@@ -43,8 +43,8 @@ steps:
       username: drone
       password:
         from_secret: harbor_drone_pass
-      repo: ${DOCKER_REPO}/${DRONE_REPO_NAME}
-      registry: ${DOCKER_REGISTRY}
+      repo: harbor.shipttech.com/${DRONE_REPO_NAME}
+      registry: harbor.shipttech.com
       dockerfile: cmd/gtoken/Dockerfile
       tags:
         - latest
@@ -65,8 +65,8 @@ steps:
       username: drone
       password:
         from_secret: harbor_drone_pass
-      repo: ${DOCKER_REPO}/${DRONE_REPO_NAME}
-      registry: ${DOCKER_REGISTRY}
+      repo: harbor.shipttech.com/${DRONE_REPO_NAME}
+      registry: harbor.shipttech.com
       dockerfile: cmd/gtoken-webhook/Dockerfile
       tags:
         - latest
