@@ -10,17 +10,35 @@ trigger:
     - tag
 
 steps:
-  - name: lint
+  - name: lint gtoken
     image: golang:1.16
     commands:
       - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+      - cd cmd/gtoken
+      - go build ./...
+      - golangci-lint run
+  - name: lint gtoken-webhook
+    image: golang:1.16
+    commands:
+      - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+      - cd cmd/gtoken-webhook
       - go build ./...
       - golangci-lint run
   - name: test
     image: golang:1.16
     commands:
       - go test --race -v ./...
-  - name: docker-prod-push
+  - name: test gtoken
+    image: golang:1.16
+    commands:
+      - cd cmd/gtoken
+      - go test --race -v ./...
+  - name: test gtoken-webhook
+    image: golang:1.16
+    commands:
+      - cd cmd/gtoken-webhook
+      - go test --race -v ./...
+  - name: docker-prod-push gtoken
     image: plugins/docker
     environment:
       GITHUB_TOKEN:
@@ -30,7 +48,30 @@ steps:
       password:
         from_secret: harbor_drone_pass
       repo: ${DOCKER_REPO}/${DRONE_REPO_NAME}
-      registry: harbor.shipttech.com
+      registry: ${DOCKER_REGISTRY}
+      dockerfile: cmd/gtoken/Dockerfile
+      tags:
+        - latest
+        - ${DRONE_TAG}
+        - ${DRONE_COMMIT_SHA}
+      build_args_from_env:
+        - GITHUB_TOKEN
+    when:
+      event:
+        include:
+          - tag
+  - name: docker-prod-push gtoken-webhook
+    image: plugins/docker
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    settings:
+      username: drone
+      password:
+        from_secret: harbor_drone_pass
+      repo: ${DOCKER_REPO}/${DRONE_REPO_NAME}
+      registry: ${DOCKER_REGISTRY}
+      dockerfile: cmd/gtoken-webhook/Dockerfile
       tags:
         - latest
         - ${DRONE_TAG}
