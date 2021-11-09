@@ -37,6 +37,7 @@ steps:
   - name: docker-prod-push gtoken
     image: plugins/docker
     environment:
+      DOCKER_BUILDKIT: 1
       GITHUB_TOKEN:
         from_secret: github_token
     settings:
@@ -60,6 +61,7 @@ steps:
   - name: docker-prod-push gtoken-webhook
     image: plugins/docker
     environment:
+      DOCKER_BUILDKIT: 1
       GITHUB_TOKEN:
         from_secret: github_token
     settings:
