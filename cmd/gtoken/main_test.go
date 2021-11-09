@@ -180,7 +180,15 @@ func Test_generateIDTokenCmd(t *testing.T) {
 		wg.Done()
 	}()
 
-	resp, err := http.Post(fmt.Sprintf("http://0.0.0.0%s/quitquitquit", ServerAddr), "", bytes.NewReader([]byte("")))
+	var err error
+	var resp *http.Response
+	for i := 0; i < 100; i++ { // Try to post 10 times to allow the goroutine to catch up
+		resp, err = http.Post(fmt.Sprintf("http://localhost%s/quitquitquit", ServerAddr), "", bytes.NewReader([]byte("")))
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		t.Errorf("shouldn't receive an error while posting to webserver: %s", err)
 		return
