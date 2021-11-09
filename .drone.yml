@@ -24,10 +24,6 @@ steps:
       - cd cmd/gtoken-webhook
       - go build ./...
       - golangci-lint run
-  - name: test
-    image: golang:1.16
-    commands:
-      - go test --race -v ./...
   - name: test gtoken
     image: golang:1.16
     commands:
