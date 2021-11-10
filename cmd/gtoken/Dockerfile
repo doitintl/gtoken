@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 #
 # ----- Go Builder Image ------
 #
@@ -21,7 +19,7 @@ WORKDIR /go/src/gtoken
 # load dependency
 COPY go.mod .
 COPY go.sum .
-RUN --mount=type=cache,target=/go/mod go mod download
+RUN go mod download
 
 # copy sources
 COPY . .
