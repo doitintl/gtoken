@@ -60,9 +60,9 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     settings:
-      context: cmd/gtoken
+      context: cmd/gtoken-webhook
       dockerfile: cmd/gtoken-webhook/Dockerfile
-      repo: harbor.shipttech.com/production/${DRONE_REPO_NAME}
+      repo: harbor.shipttech.com/production/${DRONE_REPO_NAME}-webhook
       tags:
         - latest
         - ${DRONE_TAG}
