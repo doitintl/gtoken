@@ -50,10 +50,7 @@ steps:
         - ${DRONE_COMMIT_SHA}
       build_args_from_env:
         - GITHUB_TOKEN
-    when:
-      event:
-        include:
-          - tag
+
   - name: docker-prod-push gtoken-webhook
     image: plugins/docker
     environment:
@@ -70,7 +67,3 @@ steps:
         - ${DRONE_COMMIT_SHA}
       build_args_from_env:
         - GITHUB_TOKEN
-    when:
-      event:
-        include:
-          - tag
