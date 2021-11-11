@@ -187,6 +187,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 			},
 			args: args{
 				pod: &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{annotationInjectKey: "true"},
+					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -202,6 +205,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				annotations:        map[string]string{awsRoleArnKey: "arn:aws:iam::123456789012:role/testrole"},
 			},
 			wantedPod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{annotationInjectKey: "true"},
+				},
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
 						{
@@ -269,6 +275,43 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 									Medium: corev1.StorageMediumMemory,
 								},
 							},
+						},
+					},
+					ServiceAccountName: "test-sa",
+				},
+			},
+		},
+		{
+			name: "no annotation",
+			fields: fields{
+				image:      "doitintl/gtoken:test",
+				pullPolicy: "Always",
+				volumeName: "test-volume-name",
+				volumePath: "/test-volume-path",
+				tokenFile:  "test-token",
+			},
+			args: args{
+				pod: &corev1.Pod{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "TestContainer",
+								Image: "test-image",
+							},
+						},
+						ServiceAccountName: "test-sa",
+					},
+				},
+				ns:                 "test-namespace",
+				serviceAccountName: "test-sa",
+				annotations:        map[string]string{awsRoleArnKey: "arn:aws:iam::123456789012:role/testrole"},
+			},
+			wantedPod: &corev1.Pod{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "TestContainer",
+							Image: "test-image",
 						},
 					},
 					ServiceAccountName: "test-sa",

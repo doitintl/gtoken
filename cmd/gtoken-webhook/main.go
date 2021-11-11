@@ -44,6 +44,8 @@ const (
 	// AWS annotation key; used to annotate Kubernetes Service Account with AWS Role ARN
 	awsRoleArnKey = "amazonaws.com/role-arn"
 
+	annotationInjectKey = "gtoken.shipt.com/inject"
+
 	// AWS Web Identity Token ENV
 	awsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
 	awsRoleArn              = "AWS_ROLE_ARN"
@@ -179,7 +181,28 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleA
 	return true
 }
 
+func (mw *mutatingWebhook) containsGtokenInjectAnnotation(annotations map[string]string, annotationKey string) bool {
+	value, ok := annotations[annotationKey]
+	if !ok {
+		return false
+	}
+
+	switch value {
+	case "y", "yes", "true", "on":
+		return true
+	}
+
+	return false
+}
+
 func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) error {
+	shouldInject := mw.containsGtokenInjectAnnotation(pod.GetObjectMeta().GetAnnotations(), annotationInjectKey)
+
+	if !shouldInject {
+		logger.Debug(fmt.Sprintf("skipping pod without gtoken annotation: %s", pod.GetName()))
+		return nil
+	}
+
 	// get service account AWS Role ARN annotation
 	roleArn, ok, err := mw.getAwsRoleArn(pod.Spec.ServiceAccountName, ns)
 	if err != nil {
