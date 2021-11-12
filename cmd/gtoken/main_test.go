@@ -199,3 +199,28 @@ func Test_generateIDTokenCmd(t *testing.T) {
 	assert.Equal(t, resp.StatusCode, http.StatusOK, "request should return a 200")
 	wg.Wait()
 }
+
+func Test_generateIDTokenCmdNoRefresh(t *testing.T) {
+	//
+	ctx := context.Background()
+	mockSA := &gcp.MockServiceAccountInfo{}
+	mockToken := &gcp.MockToken{}
+	fileName := "jwt.token"
+	email := "test@project.iam.gserviceaccount.com"
+	mockSA.On("GetID", mock.AnythingOfType("*context.cancelCtx")).Return(email, nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+	mockToken.On("GetDuration", "whatever").Return(31*time.Second, nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		err := startServerAndGenerator(ctx, mockSA, mockToken, fileName, false)
+		assert.Nil(t, err, "generateIDTokenCmd should not return an error when context is canceled")
+		wg.Done()
+	}()
+
+	wg.Wait() // If this hangs forever, then we don't cancel the webserver context when id generation is done
+}

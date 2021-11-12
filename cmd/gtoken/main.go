@@ -111,6 +111,7 @@ func startServerAndGenerator(ctx context.Context, saInfo gcp.ServiceAccountInfo,
 	}()
 
 	mainErr := <-errChan
+	cancel() // Always cancel when the generation ends. This will shutdown the webserver
 	<-shutdown
 
 	return mainErr
