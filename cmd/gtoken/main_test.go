@@ -15,6 +15,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const (
+	testEmail = "test@project.iam.gserviceaccount.com"
+	testToken = "jwt.token"
+)
+
 //nolint:funlen
 func Test_generateIDToken(t *testing.T) {
 	type args struct {
@@ -35,10 +40,10 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "one time token generation",
 			args: args{
-				file: "jwt.token",
+				file: testToken,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -50,10 +55,10 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "one time token generation from email",
 			args: args{
-				file: "jwt.token",
+				file: testToken,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -66,11 +71,11 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "refresh token generation",
 			args: args{
-				file:    "jwt.token",
+				file:    testToken,
 				refresh: true,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -93,10 +98,10 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "failed to generate token",
 			args: args{
-				file: "jwt.token",
+				file: testToken,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -109,10 +114,10 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "failed to write token",
 			args: args{
-				file: "jwt.token",
+				file: testToken,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -124,11 +129,11 @@ func Test_generateIDToken(t *testing.T) {
 		{
 			name: "failed to get duration from token",
 			args: args{
-				file:    "jwt.token",
+				file:    testToken,
 				refresh: true,
 			},
 			fields: fields{
-				email: "test@project.iam.gserviceaccount.com",
+				email: testEmail,
 				jwt:   "whatever",
 			},
 			mockInit: func(ctx context.Context, sa *gcp.MockServiceAccountInfo, token *gcp.MockToken, args args, fields fields) {
@@ -163,8 +168,8 @@ func Test_generateIDTokenCmd(t *testing.T) {
 	ctx := context.Background()
 	mockSA := &gcp.MockServiceAccountInfo{}
 	mockToken := &gcp.MockToken{}
-	fileName := "jwt.token"
-	email := "test@project.iam.gserviceaccount.com"
+	fileName := testToken
+	email := testEmail
 	mockSA.On("GetID", mock.AnythingOfType("*context.cancelCtx")).Return(email, nil)
 	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
 	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
@@ -205,19 +210,17 @@ func Test_generateIDTokenCmdNoRefresh(t *testing.T) {
 	ctx := context.Background()
 	mockSA := &gcp.MockServiceAccountInfo{}
 	mockToken := &gcp.MockToken{}
-	fileName := "jwt.token"
-	email := "test@project.iam.gserviceaccount.com"
-	mockSA.On("GetID", mock.AnythingOfType("*context.cancelCtx")).Return(email, nil)
-	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
-	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+	mockSA.On("GetID", mock.AnythingOfType("*context.cancelCtx")).Return(testEmail, nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), testEmail).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", testToken).Return(nil)
 	mockToken.On("GetDuration", "whatever").Return(31*time.Second, nil)
-	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), email).Return("whatever", nil)
-	mockToken.On("WriteToFile", "whatever", fileName).Return(nil)
+	mockToken.On("Generate", mock.AnythingOfType("*context.cancelCtx"), testEmail).Return("whatever", nil)
+	mockToken.On("WriteToFile", "whatever", testToken).Return(nil)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err := startServerAndGenerator(ctx, mockSA, mockToken, fileName, false)
+		err := startServerAndGenerator(ctx, mockSA, mockToken, testToken, false)
 		assert.Nil(t, err, "generateIDTokenCmd should not return an error when context is canceled")
 		wg.Done()
 	}()
