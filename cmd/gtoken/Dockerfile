@@ -42,12 +42,12 @@ CMD ["/gtoken"]
 #
 # ------ gtoken release Docker image ------
 #
-FROM scratch
+#FROM scratch
 
 # copy CA certificates
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+# COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # this is the last commabd since it's never cached
-COPY --from=build /go/src/gtoken/.bin/github.com/doitintl/gtoken /gtoken
+# COPY --from=build /go/src/gtoken/.bin/github.com/doitintl/gtoken /gtoken
 
-ENTRYPOINT ["/gtoken"]
+# ENTRYPOINT ["/gtoken"]
