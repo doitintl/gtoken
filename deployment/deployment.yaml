@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: gtoken-webhook
-          image: doitintl/gtoken-webhook
+          image: gcr.io/cyco-main/gtoken-webhook
           imagePullPolicy: Always
           args:
             - --log-level=debug
