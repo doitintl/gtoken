@@ -202,6 +202,9 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				annotations:        map[string]string{awsRoleArnKey: "arn:aws:iam::123456789012:role/testrole"},
 			},
 			wantedPod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"sidecar-terminator/sidecars": "update-gcp-id-token"},
+				},
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
 						{

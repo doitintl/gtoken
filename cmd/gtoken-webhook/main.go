@@ -208,12 +208,17 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
 		// append sidekick gtoken update container (as last container)
-		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer("update-gcp-id-token",
+		sidekickName := "update-gcp-id-token"
+		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer(sidekickName,
 			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
 		logger.Debug("successfully prepended pod sidekick containers to spec")
 		// append empty gtoken volume
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName))
 		logger.Debug("successfully appended pod spec volumes")
+		if pod.ObjectMeta.Annotations == nil {
+			pod.ObjectMeta.Annotations = make(map[string]string)
+		}
+		pod.ObjectMeta.Annotations["sidecar-terminator/sidecars"] = sidekickName
 	}
 
 	return nil
