@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/doitintl/gtoken/internal/gcp"
-
+	"github.com/fsnotify/fsnotify"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,7 +22,8 @@ var (
 	BuildDate = "unknown"
 )
 
-func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string, refresh bool) error {
+func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp.Token, file string,
+	refresh bool, initRefreshDelay time.Duration) error {
 	// find out active Service Account, first by ID
 	serviceAccount, err := sa.GetID(ctx)
 	if err != nil {
@@ -33,14 +34,32 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 	if err != nil {
 		return err
 	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fmt.Println("ERROR", err)
+	}
+	if err := watcher.Add("/tmp"); err != nil {
+		fmt.Println("watcher error", err)
+	}
 	// initial duration to 1ms
 	duration := time.Millisecond
+	if refresh {
+		// for refresh - we have some time with current token
+		duration = initRefreshDelay
+	}
 	timer := time.NewTimer(duration).C
 	for {
 		// wait for next timer tick or cancel
 		select {
 		case <-ctx.Done():
 			return nil // avoid goroutine leak
+		case event, ok := <-watcher.Events:
+			if !ok || !refresh {
+				continue
+			}
+			if event.Name == "/tmp/should_exit" {
+				return nil
+			}
 		case <-timer:
 			// generate ID token
 			token, err := idToken.Generate(ctx, serviceAccount)
@@ -72,7 +91,8 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 }
 
 func generateIDTokenCmd(c *cli.Context) error {
-	return generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"))
+	return generateIDToken(handleSignals(), gcp.NewSaInfo(), gcp.NewIDToken(), c.String("file"), c.Bool("refresh"),
+		60*time.Second)
 }
 
 func handleSignals() context.Context {
@@ -121,6 +141,6 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s", err)
 	}
 }

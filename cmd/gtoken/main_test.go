@@ -144,7 +144,7 @@ func Test_generateIDToken(t *testing.T) {
 				time.Sleep(time.Second)
 				cancel()
 			}()
-			if err := generateIDToken(ctx, mockSA, mockToken, tt.args.file, tt.args.refresh); (err != nil) != tt.wantErr {
+			if err := generateIDToken(ctx, mockSA, mockToken, tt.args.file, tt.args.refresh, time.Millisecond); (err != nil) != tt.wantErr {
 				t.Errorf("generateIDToken() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			mockSA.AssertExpectations(t)
