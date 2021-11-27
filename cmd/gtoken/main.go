@@ -38,6 +38,7 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 	if err != nil {
 		fmt.Println("ERROR", err)
 	}
+	defer watcher.Close()
 	if err := watcher.Add("/tmp"); err != nil {
 		fmt.Println("watcher error", err)
 	}
