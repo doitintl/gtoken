@@ -135,6 +135,9 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 
 // check if K8s Service Account is annotated with AWS role
 func (mw *mutatingWebhook) getAwsRoleArn(name, ns string) (string, bool, error) {
+	if name == "" {
+		return "", false, nil
+	}
 	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		logger.WithFields(log.Fields{"service account": name, "namespace": ns}).WithError(err).Fatalf("error getting service account")
