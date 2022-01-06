@@ -50,6 +50,7 @@ const (
 	awsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
 	awsRoleArn              = "AWS_ROLE_ARN"
 	awsRoleSessionName      = "AWS_ROLE_SESSION_NAME"
+	awsGtokenEnvVarName     = "GTOKEN_AWS_ROLE_ARN"
 )
 
 var (
@@ -203,15 +204,35 @@ func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) er
 		return nil
 	}
 
-	// get service account AWS Role ARN annotation
-	roleArn, ok, err := mw.getAwsRoleArn(pod.Spec.ServiceAccountName, ns)
-	if err != nil {
-		return err
+	manualRoleArn := ""
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == awsGtokenEnvVarName && env.Value != "" {
+				manualRoleArn = env.Value
+				break
+			}
+		}
+
+		if manualRoleArn != "" {
+			break
+		}
 	}
-	if !ok {
-		logger.Debug("skipping pods with Service Account without AWS Role ARN annotation")
-		return nil
+
+	var roleArn = manualRoleArn
+	if roleArn == "" { // check role arn on SA if not specified in ENV
+		var ok bool
+		var err error
+		// get service account AWS Role ARN annotation
+		roleArn, ok, err = mw.getAwsRoleArn(pod.Spec.ServiceAccountName, ns)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			logger.Debug("skipping pods with Service Account without AWS Role ARN annotation")
+			return nil
+		}
 	}
+
 	// mutate Pod init containers
 	initContainersMutated := mw.mutateContainers(pod.Spec.InitContainers, roleArn)
 	if initContainersMutated {
