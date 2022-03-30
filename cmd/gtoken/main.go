@@ -33,6 +33,7 @@ func generateIDToken(ctx context.Context, sa gcp.ServiceAccountInfo, idToken gcp
 	if err != nil {
 		return err
 	}
+	log.Printf("found service account: %s\n", serviceAccount)
 	// initial duration to 1ms
 	duration := time.Millisecond
 	timer := time.NewTimer(duration).C
