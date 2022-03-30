@@ -272,6 +272,20 @@ Run a new K8s Pod with K8s ${KSA_NAME} Service Account:
 # run a pod (with AWS CLI onboard) in interactive mod
 kubectl run -it --rm --generator=run-pod/v1 --image mikesir87/aws-cli --serviceaccount ${KSA_NAME} test-pod
 
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: ${K8S_NAMESPACE}
+spec:
+  serviceAccountName: ${KSA_NAME}
+  containers:
+  - name: test-pod
+    image: mikesir87/aws-cli
+    command: ["tail", "-f", "/dev/null"]
+EOF
+
 # in Pod shell: check AWS assumed role
 aws sts get-caller-identity
 
