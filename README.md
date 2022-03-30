@@ -89,6 +89,12 @@ certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default approve
 secret/gtoken-webhook-certs configured
 ```
 
+Create Kubernetes Service Account to be used with `gtoken-webhook`:
+
+```sh
+kubectl create -f deployment/service-account.yaml
+```
+
 Once the secret is created, we can create deployment and service. These are standard Kubernetes deployment and service resources. Up until this point we’ve produced nothing but an HTTP server that’s accepting requests through a service on port 443:
 
 ```sh
@@ -124,12 +130,6 @@ kubectl create -f deployment/mutatingwebhook-bundle.yaml
 ```
 
 ### configure RBAC for gtoken-webhook
-
-Create Kubernetes Service Account to be used with `gtoken-webhook`:
-
-```sh
-kubectl create -f deployment/service-account.yaml
-```
 
 Define RBAC permission for webhook service account:
 
@@ -217,7 +217,7 @@ cat > gcp-trust-policy.json << EOF
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "accounts.google.com:sub": "${GSA_SA}"
+          "accounts.google.com:sub": "${GSA_NAME}"
         }
       }
     }
