@@ -252,7 +252,7 @@ kubectl create serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME}
 Annotate K8s Service Account with GKE Workload Identity (GCP Service Account email)
 
 ```sh
-kubectl annotate serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME}
+kubectl annotate serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME} \
   iam.gke.io/gcp-service-account=${GSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
 
 ```
