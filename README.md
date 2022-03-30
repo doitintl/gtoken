@@ -217,7 +217,7 @@ cat > gcp-trust-policy.json << EOF
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "accounts.google.com:sub": "${GSA_NAME}"
+          "accounts.google.com:sub": "${GSA_ID}"
         }
       }
     }
