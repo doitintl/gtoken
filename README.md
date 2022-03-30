@@ -270,8 +270,6 @@ Run a new K8s Pod with K8s ${KSA_NAME} Service Account:
 
 ```sh
 # run a pod (with AWS CLI onboard) in interactive mod
-kubectl run -it --rm --generator=run-pod/v1 --image mikesir87/aws-cli --serviceaccount ${KSA_NAME} test-pod
-
 cat << EOF | kubectl apply -f -
 apiVersion: v1
 kind: Pod
