@@ -13,13 +13,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-
 	whhttp "github.com/slok/kubewebhook/pkg/http"
 	"github.com/slok/kubewebhook/pkg/observability/metrics"
 	whcontext "github.com/slok/kubewebhook/pkg/webhook/context"
 	"github.com/slok/kubewebhook/pkg/webhook/mutating"
 	"github.com/urfave/cli"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,6 +77,7 @@ var logger *log.Logger
 
 // Returns an int >= min, < max
 func randomInt(min, max int) int {
+	//nolint:gosec
 	return min + rand.Intn(max-min)
 }
 
@@ -134,11 +133,8 @@ func handlerFor(config mutating.WebhookConfig, mutator mutating.MutatorFunc, rec
 }
 
 // check if K8s Service Account is annotated with AWS role
-func (mw *mutatingWebhook) getAwsRoleArn(name, ns string) (string, bool, error) {
-	if name == "" {
-		return "", false, nil
-	}
-	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
+func (mw *mutatingWebhook) getAwsRoleArn(ctx context.Context, name, ns string) (string, bool, error) {
+	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.WithFields(log.Fields{"service account": name, "namespace": ns}).WithError(err).Fatalf("error getting service account")
 		return "", false, err
@@ -180,9 +176,9 @@ func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleA
 	return true
 }
 
-func (mw *mutatingWebhook) mutatePod(pod *corev1.Pod, ns string, dryRun bool) error {
+func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, ns string, dryRun bool) error {
 	// get service account AWS Role ARN annotation
-	roleArn, ok, err := mw.getAwsRoleArn(pod.Spec.ServiceAccountName, ns)
+	roleArn, ok, err := mw.getAwsRoleArn(ctx, pod.Spec.ServiceAccountName, ns)
 	if err != nil {
 		return err
 	}
@@ -294,7 +290,7 @@ func before(c *cli.Context) error {
 func (mw *mutatingWebhook) podMutator(ctx context.Context, obj metav1.Object) (bool, error) {
 	switch v := obj.(type) {
 	case *corev1.Pod:
-		return false, mw.mutatePod(v, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
+		return false, mw.mutatePod(ctx, v, whcontext.GetAdmissionRequest(ctx).Namespace, whcontext.IsAdmissionRequestDryRun(ctx))
 	default:
 		return false, nil
 	}

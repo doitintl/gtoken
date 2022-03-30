@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -293,7 +294,7 @@ func Test_mutatingWebhook_mutatePod(t *testing.T) {
 				volumePath: tt.fields.volumePath,
 				tokenFile:  tt.fields.tokenFile,
 			}
-			if err := mw.mutatePod(tt.args.pod, tt.args.ns, tt.args.dryRun); (err != nil) != tt.wantErr {
+			if err := mw.mutatePod(context.TODO(), tt.args.pod, tt.args.ns, tt.args.dryRun); (err != nil) != tt.wantErr {
 				t.Errorf("mutatingWebhook.mutatePod() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !cmp.Equal(tt.args.pod, tt.wantedPod) {
