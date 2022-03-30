@@ -232,7 +232,7 @@ aws iam create-role --role-name ${AWS_ROLE_NAME} --assume-role-policy-document f
 aws iam attach-role-policy --role-name ${AWS_ROLE_NAME} --policy-arn arn:aws:iam::aws:policy/${AWS_POLICY_NAME}
 
 # get AWS Role ARN to be used in K8s SA annotation
-AWS_ROLE_ARN=$(aws iam get-role --role-name ${ROLE_NAME} --query Role.Arn --output text)
+AWS_ROLE_ARN=$(aws iam get-role --role-name ${AWS_ROLE_NAME} --query Role.Arn --output text)
 ```
 
 ### GKE: Kubernetes Service Account
