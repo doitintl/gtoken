@@ -260,7 +260,7 @@ kubectl annotate serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME} \
 Annotate K8s Service Account with AWS Role ARN:
 
 ```sh
-kubectl annotate serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME}
+kubectl annotate serviceaccount --namespace ${K8S_NAMESPACE} ${KSA_NAME} \
   amazonaws.com/role-arn=${AWS_ROLE_ARN}
 ```
 
