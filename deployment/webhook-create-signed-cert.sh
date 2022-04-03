@@ -129,3 +129,8 @@ kubectl create secret generic ${secret} \
         --from-file=cert.pem=${tmpdir}/server-cert.pem \
         --dry-run=client -o yaml |
     kubectl -n ${namespace} apply -f -
+
+# get CA bundle for use by webhook bootstrap
+caBundle=$(kubectl config view --raw --flatten -o json | jq -r '.clusters[] | select(.name == "'$(kubectl config current-context)'") | .cluster."certificate-authority-data"')
+echo "Encoded CA:"
+echo -e "${caBundle} \n"
