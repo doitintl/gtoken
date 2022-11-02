@@ -87,7 +87,7 @@ certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default approve
 secret/gtoken-webhook-certs configured
 ```
 
-**Note** Gor GKE Autopilot, run the [webhook-create-self-signed-cert.sh](https://github.com/doitintl/gtoken/blob/master/deployment/webhook-create-self-signed-cert.sh) script to generate a self-signed certificate.
+**Note** For the GKE Autopilot, run the [webhook-create-self-signed-cert.sh](https://github.com/doitintl/gtoken/blob/master/deployment/webhook-create-self-signed-cert.sh) script to generate a self-signed certificate.
 
 Export CA Bundle as environment variable:
 
