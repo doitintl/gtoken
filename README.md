@@ -95,12 +95,9 @@ Export CA Bundle as environment variable:
 export CA_BUNDLE=[output value of the previous script "Encoded CA:"]
 ```
 
-Then, we’ll create the webhook service and deployment:
+Then, we’ll create the webhook service and deployment.
 
-```yaml
-```
-
-Create Kubernetes Service Account to be used with `gtoken-webhook`:
+First, create a Kubernetes Service Account to be used with the `gtoken-webhook`:
 
 ```sh
 kubectl create -f deployment/service-account.yaml
