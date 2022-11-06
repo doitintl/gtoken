@@ -53,6 +53,14 @@ The `gtoken-webhook` can be configured to skip injection for all Pods in the spe
 
 ## `gtoken-webhook` deployment
 
+1. Create a new `gtoken` namespace:
+
+```sh
+kubectl create -f deployment/namespace.yaml
+```
+
+```
+
 1. To deploy the `gtoken-webhook` server, we need to create a webhook service and a deployment in our Kubernetes cluster. It’s pretty straightforward, except one thing, which is the server’s TLS configuration. If you’d care to examine the [deployment.yaml](https://github.com/doitintl/gtoken/blob/master/deployment/deployment.yaml) file, you’ll find that the certificate and corresponding private key files are read from command line arguments, and that the path to these files comes from a volume mount that points to a Kubernetes secret:
 
 ```yaml
