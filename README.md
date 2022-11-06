@@ -47,7 +47,19 @@ Injected AWS environment variables:
 
 The AWS SDK will automatically make the corresponding `AssumeRoleWithWebIdentity` calls to AWS STS on your behalf. It will handle in memory caching as well as refreshing credentials as needed.
 
+### skip injection
+
+The `gtoken-webhook` can be configured to skip injection for all Pods in the specific Namespace by adding the `admission.gtoken/ignore` label to the Namespace.
+
 ## `gtoken-webhook` deployment
+
+1. Create a new `gtoken` namespace:
+
+```sh
+kubectl create -f deployment/namespace.yaml
+```
+
+```
 
 1. To deploy the `gtoken-webhook` server, we need to create a webhook service and a deployment in our Kubernetes cluster. It’s pretty straightforward, except one thing, which is the server’s TLS configuration. If you’d care to examine the [deployment.yaml](https://github.com/doitintl/gtoken/blob/master/deployment/deployment.yaml) file, you’ll find that the certificate and corresponding private key files are read from command line arguments, and that the path to these files comes from a volume mount that points to a Kubernetes secret:
 
@@ -80,10 +92,10 @@ Generating RSA private key, 2048 bit long modulus
 .........................+++
 ....................+++
 e is 65537 (0x10001)
-certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default created
+certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.gtoken created
 NAME                         AGE   REQUESTOR              CONDITION
-gtoken-webhook-svc.default   1s    alexei@doit-intl.com   Pending
-certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.default approved
+gtoken-webhook-svc.gtoken   1s    alexei@doit-intl.com   Pending
+certificatesigningrequest.certificates.k8s.io/gtoken-webhook-svc.gtoken approved
 secret/gtoken-webhook-certs configured
 ```
 
@@ -119,7 +131,7 @@ Now that our webhook server is running, it can accept requests from the `apiserv
 [...]
       service:
         name: gtoken-webhook-svc
-        namespace: default
+        namespace: gtoken
         path: "/pods"
       caBundle: ${CA_BUNDLE}
 [...]
