@@ -11,13 +11,21 @@ webhooks:
     clientConfig:
       service:
         name: gtoken-webhook-svc
-        namespace: default
+        namespace: gtoken
         path: "/pods"
       caBundle: ${CA_BUNDLE}
+    # select namespaces without the label "admission.gtoken/ignore"
+    namespaceSelector:
+      matchExpressions:
+        - key: admission.gtoken/ignore
+          operator: DoesNotExist
     rules:
       - operations: ["CREATE"]
         apiGroups: ["*"]
         apiVersions: ["*"]
         resources: ["pods"]
+        scope: "Namespaced"
+    # ignore failures
+    failurePolicy: Ignore
 
 

@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gtoken-webhook-svc
+  namespace: gtoken
   labels:
     app: gtoken-webhook
 spec:

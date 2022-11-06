@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gtoken-webhook-deployment
+  namespace: gtoken
   labels:
     app: gtoken-webhook
 spec:

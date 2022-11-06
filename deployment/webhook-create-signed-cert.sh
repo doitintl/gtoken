@@ -48,7 +48,7 @@ done
 
 [ -z ${service} ] && service=gtoken-webhook-svc
 [ -z ${secret} ] && secret=gtoken-webhook-certs
-[ -z ${namespace} ] && namespace=default
+[ -z ${namespace} ] && namespace=gtoken
 
 if [ ! -x "$(command -v openssl)" ]; then
     echo "openssl not found"
