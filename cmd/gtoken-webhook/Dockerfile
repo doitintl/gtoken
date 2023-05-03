@@ -7,7 +7,7 @@ FROM golang:1.17-alpine AS builder
 
 # curl git bash
 RUN apk add --no-cache curl git bash make
-COPY --from=golangci/golangci-lint:v1.45-alpine /usr/bin/golangci-lint /usr/bin
+COPY --from=golangci/golangci-lint:v1.52-alpine /usr/bin/golangci-lint /usr/bin
 
 #
 # ----- Build and Test Image -----
