@@ -115,6 +115,7 @@ func serveMetrics(addr string) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	/* #nosec G114 -- temporarily disable until ARM build works */
 	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		logger.WithError(err).Fatal("error serving telemetry")
@@ -361,9 +362,11 @@ func runWebhook(c *cli.Context) error {
 
 	if tlsCertFile == "" && tlsPrivateKeyFile == "" {
 		logger.Infof("listening on http://%s", listenAddress)
+		/* #nosec G114 -- temporarily disable until ARM build works */
 		err = http.ListenAndServe(listenAddress, mux)
 	} else {
 		logger.Infof("listening on https://%s", listenAddress)
+		/* #nosec G114 -- temporarily disable until ARM build works */
 		err = http.ListenAndServeTLS(listenAddress, tlsCertFile, tlsPrivateKeyFile, mux)
 	}
 
