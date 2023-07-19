@@ -49,6 +49,9 @@ const (
 	awsWebIdentityTokenFile = "AWS_WEB_IDENTITY_TOKEN_FILE"
 	awsRoleArn              = "AWS_ROLE_ARN"
 	awsRoleSessionName      = "AWS_ROLE_SESSION_NAME"
+
+	// application specific annotations
+	tokenRefreshAnnotation = "gtoken.doit-intl.com/tokenRefresh"
 )
 
 var (
@@ -151,6 +154,22 @@ func (mw *mutatingWebhook) getAwsRoleArn(ctx context.Context, name, ns string) (
 	return roleArn, ok, nil
 }
 
+// check if K8s Service Account is annotated with Auto refresh token flag
+func (mw *mutatingWebhook) getAutoRefreshAnnotation(ctx context.Context, pod *corev1.Pod, ns string) (refreshToken string, ok bool, err error) {
+	// check if the annotation is present on the pod annotation
+	refreshToken, ok = pod.GetAnnotations()[tokenRefreshAnnotation]
+	if ok {
+		return refreshToken, ok, nil
+	}
+	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(ctx, pod.Spec.ServiceAccountName, metav1.GetOptions{})
+	if err != nil {
+		logger.WithFields(log.Fields{"service account": pod.Spec.ServiceAccountName, "namespace": ns}).WithError(err).Fatalf("error getting service account")
+		return "", false, err
+	}
+	refreshToken, ok = sa.GetAnnotations()[tokenRefreshAnnotation]
+	return refreshToken, ok, nil
+}
+
 func (mw *mutatingWebhook) mutateContainers(containers []corev1.Container, roleArn string) bool {
 	if len(containers) == 0 {
 		return false
@@ -201,8 +220,14 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, ns st
 	} else {
 		logger.Debug("no pod init containers were mutated")
 	}
-	// mutate Pod containers
-	containersMutated := mw.mutateContainers(pod.Spec.Containers, roleArn)
+	var containersMutated bool
+	refreshToken, refreshTokenPresent, err := mw.getAutoRefreshAnnotation(ctx, pod, ns)
+	if err != nil {
+		return err
+	}
+	var refresh = refreshToken == "true"
+	// mutate Pod containers. Skip if autoRefresh is disabled
+	containersMutated = mw.mutateContainers(pod.Spec.Containers, roleArn)
 	if containersMutated {
 		logger.Debug("successfully mutated pod containers")
 	} else {
@@ -214,11 +239,16 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, ns st
 		pod.Spec.InitContainers = append([]corev1.Container{getGtokenContainer("generate-gcp-id-token",
 			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, false)}, pod.Spec.InitContainers...)
 		logger.Debug("successfully prepended pod init containers to spec")
-		// append sidekick gtoken update container (as last container)
-		pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer("update-gcp-id-token",
-			mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
-		logger.Debug("successfully prepended pod sidekick containers to spec")
-		// append empty gtoken volume
+		// append sidekick gtoken update container (as last container). Skip if autoRefresh is disabled
+
+		if !refreshTokenPresent || refresh {
+			pod.Spec.Containers = append(pod.Spec.Containers, getGtokenContainer("update-gcp-id-token",
+				mw.image, mw.pullPolicy, mw.volumeName, mw.volumePath, mw.tokenFile, true))
+			logger.Debug("successfully prepended pod sidekick containers to spec")
+			// append empty gtoken volume
+		} else {
+			logger.Debug("autoRefresh is disabled")
+		}
 		pod.Spec.Volumes = append(pod.Spec.Volumes, getGtokenVolume(mw.volumeName))
 		logger.Debug("successfully appended pod spec volumes")
 	}
