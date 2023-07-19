@@ -155,13 +155,18 @@ func (mw *mutatingWebhook) getAwsRoleArn(ctx context.Context, name, ns string) (
 }
 
 // check if K8s Service Account is annotated with Auto refresh token flag
-func (mw *mutatingWebhook) getAutoRefreshAnnotation(ctx context.Context, name, ns string) (string, bool, error) {
-	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
+func (mw *mutatingWebhook) getAutoRefreshAnnotation(ctx context.Context, pod *corev1.Pod, ns string) (refreshToken string, ok bool, err error) {
+	// check if the annotation is present on the pod annotation
+	refreshToken, ok = pod.GetAnnotations()[tokenRefreshAnnotation]
+	if ok {
+		return refreshToken, ok, nil
+	}
+	sa, err := mw.k8sClient.CoreV1().ServiceAccounts(ns).Get(ctx, pod.Spec.ServiceAccountName, metav1.GetOptions{})
 	if err != nil {
-		logger.WithFields(log.Fields{"service account": name, "namespace": ns}).WithError(err).Fatalf("error getting service account")
+		logger.WithFields(log.Fields{"service account": pod.Spec.ServiceAccountName, "namespace": ns}).WithError(err).Fatalf("error getting service account")
 		return "", false, err
 	}
-	refreshToken, ok := sa.GetAnnotations()[tokenRefreshAnnotation]
+	refreshToken, ok = sa.GetAnnotations()[tokenRefreshAnnotation]
 	return refreshToken, ok, nil
 }
 
@@ -216,7 +221,7 @@ func (mw *mutatingWebhook) mutatePod(ctx context.Context, pod *corev1.Pod, ns st
 		logger.Debug("no pod init containers were mutated")
 	}
 	var containersMutated bool
-	refreshToken, refreshTokenPresent, err := mw.getAutoRefreshAnnotation(ctx, pod.Spec.ServiceAccountName, ns)
+	refreshToken, refreshTokenPresent, err := mw.getAutoRefreshAnnotation(ctx, pod, ns)
 	if err != nil {
 		return err
 	}
